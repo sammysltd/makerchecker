@@ -272,6 +272,82 @@ describe("LLMExecutor — tool-use loop", () => {
       /no LLM provider registered/,
     );
   });
+
+  // ADVERSARIAL: enforcement filters the permitted skill set ONCE, upstream of
+  // the loop; the loop then PINS that set for the whole step (allow-until-step-
+  // end). So a grant revoked mid-step — even the running step's own role
+  // revoking its grant for a not-yet-called tool — does NOT shrink the pinned
+  // set: the second invocation still runs. This is intentional and documented:
+  // the loop must not re-enforce grants between tool calls (a step that began
+  // authorized completes deterministically; the revocation governs the NEXT
+  // run). The guarantee that protects against ungranted execution lives at
+  // scheduling + invocation enforcement, not inside the model's tool loop.
+  it("pins the permitted tools for the step — a mid-loop grant revoke does not re-enforce", async () => {
+    const runId = "10000000-0000-0000-0000-000000000005";
+
+    // Grant both skills to the executor's role. The FIRST skill's fn revokes
+    // this very role's grant for the SECOND skill while the step is mid-flight.
+    await seedSkill("revoke-self@1", {
+      fn: async () => {
+        await db.pool.query(
+          `UPDATE role_skill_grants SET revoked_at = now()
+            WHERE role_id = $1
+              AND skill_id = (SELECT id FROM skills WHERE name = 'second-tool' AND version = 1)
+              AND revoked_at IS NULL`,
+          [META.roleId],
+        );
+        return { revokedSecondGrant: true };
+      },
+    });
+    await seedSkill("second-tool@1", { fn: async () => ({ ran: true }) });
+    await db.pool.query(
+      `INSERT INTO role_skill_grants (role_id, skill_id)
+       SELECT $1, id FROM skills WHERE name IN ('revoke-self', 'second-tool') AND version = 1`,
+      [META.roleId],
+    );
+
+    // Two tool calls back to back, then a final text turn. The grant for the
+    // second tool is gone by the time it is invoked — but the loop pinned it.
+    const provider = new MockProvider().queue(
+      toolCall(toolNameForRef("revoke-self@1"), {}, "call_revoke"),
+      toolCall(toolNameForRef("second-tool@1"), {}, "call_second"),
+      text("Both tools ran."),
+    );
+
+    const output = await makeExecutor(provider).execute(
+      stepReq(["revoke-self@1", "second-tool@1"], {}, runId),
+    );
+    // The loop completed normally — the second invocation was NOT re-enforced.
+    expect(output).toEqual({ text: "Both tools ran.", iterations: 3 });
+
+    // The grant really is revoked now (so any FUTURE step would be blocked
+    // upstream), proving the revoke fired mid-step — yet this step still ran it.
+    const activeGrant = await db.pool.query(
+      `SELECT 1 FROM role_skill_grants
+        WHERE role_id = $1
+          AND skill_id = (SELECT id FROM skills WHERE name = 'second-tool' AND version = 1)
+          AND revoked_at IS NULL`,
+      [META.roleId],
+    );
+    expect(activeGrant.rowCount).toBe(0);
+
+    // Both skills were invoked and audited; the second produced its real output
+    // (not an enforcement error fed back to the model).
+    const events = await auditEvents(runId);
+    expect(events.map((e) => e.event_type)).toEqual([
+      "llm.call",
+      "skill.invoked",
+      "llm.call",
+      "skill.invoked",
+      "llm.call",
+    ]);
+    const invoked = events.filter((e) => e.event_type === "skill.invoked");
+    expect(invoked[0]!.payload).toMatchObject({ skillRef: "revoke-self@1" });
+    expect(invoked[1]!.payload).toMatchObject({
+      skillRef: "second-tool@1",
+      output: { ran: true },
+    });
+  });
 });
 
 describe("SkillInvoker — http and mcp dispatch", () => {
