@@ -55,6 +55,12 @@ const DecisionBody = Type.Object(
   { additionalProperties: false },
 );
 
+// Route :id params are UUIDs. Validating the format up front turns a malformed
+// id into a clean 400 instead of letting it reach a uuid-typed query and throw
+// a raw Postgres 22P02 (500). Matches the admin/proxy routes' IdParams.
+const UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+const IdParams = Type.Object({ id: Type.String({ pattern: UUID_PATTERN }) });
+
 /**
  * The MakerChecker API: run/approval endpoints plus admin CRUD (see
  * api/admin-routes.ts). All API routes live under the /api prefix so they
@@ -73,6 +79,19 @@ export async function buildApp(ctx?: EngineContext): Promise<FastifyInstance> {
   const app = Fastify({
     logger: false,
     ajv: { customOptions: { removeAdditional: false } },
+  });
+
+  // Global error handler. Deliberate domain responses (reply.status(4xx).send)
+  // never reach here. For an UNCAUGHT/re-thrown error: pass <500 through (this
+  // preserves Fastify's FST_ERR_VALIDATION 400 messages), but for >=500 log the
+  // full error server-side and return a generic body so infrastructure details
+  // (DB host:port, pg driver codes, stack traces) are never disclosed to a caller.
+  app.setErrorHandler((err, req, reply) => {
+    const status =
+      (err as { statusCode?: number }).statusCode ?? (err as { status?: number }).status ?? 500;
+    if (status < 500) return reply.status(status).send(err);
+    req.log.error({ err }, "unhandled error");
+    return reply.status(500).send({ error: "internal error" });
   });
 
   // Security middleware, registered BEFORE any route so it covers /healthz,
@@ -293,7 +312,7 @@ async function registerApiRoutes(
 
   api.get<{ Params: { id: string } }>(
     "/runs/:id",
-    { schema: { operationId: "getRun", tags: ["runs"] } },
+    { schema: { operationId: "getRun", tags: ["runs"], params: IdParams } },
     async (req, reply) => {
       // Object-level read scope: a non-admin must not learn about another
       // actor's run. Deny before any row is fetched, with the same 404 a
@@ -441,6 +460,7 @@ async function registerApiRoutes(
       schema: {
         operationId: "decideApproval",
         tags: ["approvals"],
+        params: IdParams,
         // additionalProperties:false locks the body to {decision, reason?} so a
         // decider cannot smuggle extra fields into the handler. The handler's
         // own check (below) still rejects an unknown decision value with a

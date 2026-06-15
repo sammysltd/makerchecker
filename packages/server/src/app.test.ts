@@ -129,6 +129,56 @@ describe("security hardening", () => {
     });
   });
 
+  describe("id param validation and error handling", () => {
+    afterEach(() => {
+      delete process.env.MAKERCHECKER_AUTH_DISABLED;
+    });
+
+    it("returns 400 (not a 500 + Postgres leak) for a non-UUID run id", async () => {
+      process.env.MAKERCHECKER_AUTH_DISABLED = "1";
+      const app = await buildApp(stubCtx);
+      const res = await app.inject({ method: "GET", url: "/api/runs/not-a-uuid" });
+      expect(res.statusCode).toBe(400);
+      expect(res.body).not.toContain("22P02");
+      await app.close();
+    });
+
+    it("returns 400 for a non-UUID approval id", async () => {
+      process.env.MAKERCHECKER_AUTH_DISABLED = "1";
+      const app = await buildApp(stubCtx);
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/approvals/not-a-uuid/decision",
+        payload: { decision: "approved" },
+      });
+      expect(res.statusCode).toBe(400);
+      await app.close();
+    });
+
+    it("returns a generic 500 without leaking an internal error message", async () => {
+      // A ctx whose query throws an infra error carrying host:port + a secret.
+      const throwingCtx = {
+        pool: {
+          query: async () => {
+            throw new Error("connect ECONNREFUSED 10.0.3.5:5432 internal-db.secret.host");
+          },
+        },
+      } as unknown as EngineContext;
+      process.env.MAKERCHECKER_AUTH_DISABLED = "1";
+      const app = await buildApp(throwingCtx);
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/runs/11111111-1111-1111-1111-111111111111",
+      });
+      expect(res.statusCode).toBe(500);
+      expect(res.json()).toEqual({ error: "internal error" });
+      // The raw error message (DB host:port, secret) must not reach the client.
+      expect(res.body).not.toContain("ECONNREFUSED");
+      expect(res.body).not.toContain("secret.host");
+      await app.close();
+    });
+  });
+
   describe("rate limiting", () => {
     const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
     afterEach(() => {
