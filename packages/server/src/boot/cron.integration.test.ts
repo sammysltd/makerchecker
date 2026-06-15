@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { makeWorkerUtils } from "graphile-worker";
+
 import { createTestDb, type TestDb } from "../../test/test-db.js";
 import { seedDemo } from "../demo/seed.js";
 import { GraphileWorkerBackend } from "../engine/graphile-backend.js";
@@ -38,6 +40,14 @@ beforeAll(async () => {
     "SELECT id FROM flow_triggers WHERE type = 'cron'",
   );
   demoTriggerId = rows[0]!.id;
+
+  // startRun enqueues the first advance in the same transaction (via
+  // graphile_worker.add_job), so the worker schema must exist before any run is
+  // started. Install it here without a runner: this suite intentionally has no
+  // worker, so the runs it starts sit queued, which is what we want to inspect.
+  const utils = await makeWorkerUtils({ pgPool: db.pool });
+  await utils.migrate();
+  await utils.release();
 
   // The handler only needs enqueue (no runner): runs it starts sit queued,
   // which is exactly what we want to inspect.
