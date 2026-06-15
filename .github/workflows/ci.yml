@@ -55,7 +55,7 @@ jobs:
       # Secret scan (Layer 5): scan the repo for committed secrets and fail on a
       # finding. Allowlist for known fixtures/placeholders lives in .gitleaks.toml.
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
           # gitleaks-action@v2 requires a token to scan pull_request events
