@@ -18,3 +18,12 @@ docker-compose.override.yml
 
 # Local agent tooling / transient worktrees
 .claude/
+
+# Python (sdk-python)
+__pycache__/
+*.egg-info/
+build/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

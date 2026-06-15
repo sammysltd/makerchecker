@@ -90,3 +90,20 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  # The Python SDK is outside the pnpm/turbo workspace, so it gets its own lane:
+  # lint (ruff), strict types (mypy), and tests (pytest, no server needed).
+  python-sdk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sdk-python
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: mypy
+      - run: pytest -q
