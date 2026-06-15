@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # JavaScript/TypeScript dependencies. pnpm keeps one lockfile at the repo root,
+  # so a single root entry covers every workspace package.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Batch minor and patch bumps into one PR to keep the noise down; major
+      # bumps still open individually so they get a real review.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+  # GitHub Actions used by the CI workflow.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

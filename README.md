@@ -1,5 +1,9 @@
 # MakerChecker
 
+[![CI](https://github.com/sammysltd/makerchecker/actions/workflows/ci.yml/badge.svg)](https://github.com/sammysltd/makerchecker/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sammysltd/makerchecker?label=release)](https://github.com/sammysltd/makerchecker/releases/latest)
+[![License](https://img.shields.io/badge/license-AGPL--3.0%20core%20%2B%20Apache--2.0%20SDK-informational)](LICENSING.md)
+
 > **Your AI agent moved the money. No one approved it.**
 
 That is the failure MakerChecker exists to stop. The moment you let an agent act, you lose the second set of eyes that every regulated process assumes is there.
