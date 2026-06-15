@@ -100,8 +100,8 @@ importers:
         specifier: ^5.2.1
         version: 5.8.5
       graphile-worker:
-        specifier: ^0.16.6
-        version: 0.16.6(typescript@5.9.3)
+        specifier: ^0.17.2
+        version: 0.17.2(typescript@5.9.3)
       pg:
         specifier: ^8.13.1
         version: 8.21.0
@@ -1580,9 +1580,9 @@ packages:
     resolution: {integrity: sha512-uMdF9Rt8/NwT1wVXNleYgM5ro2hHDodHiKA3efJhgdU8iP+r/hksnghOHreMva0sF5tV73f4TpiELPUR0g7O9w==}
     engines: {node: '>=16'}
 
-  graphile-worker@0.16.6:
-    resolution: {integrity: sha512-e7gGYDmGqzju2l83MpzX8vNG/lOtVJiSzI3eZpAFubSxh/cxs7sRrRGBGjzBP1kNG0H+c95etPpNRNlH65PYhw==}
-    engines: {node: '>=14.0.0'}
+  graphile-worker@0.17.2:
+    resolution: {integrity: sha512-zRM6797XNltD9+b0W7R49b5tcYEtlJmVembygjnvyc3kgo+qu4GURLUaFYg8gclxgRNETw0eByuUx+7N3IWyNg==}
+    engines: {node: '>=14.0.0', yarn: ^1.22.22}
     hasBin: true
 
   happy-dom@16.8.1:
@@ -4124,7 +4124,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  graphile-worker@0.16.6(typescript@5.9.3):
+  graphile-worker@0.17.2(typescript@5.9.3):
     dependencies:
       '@graphile/logger': 0.2.0
       '@types/debug': 4.1.13
