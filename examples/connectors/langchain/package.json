@@ -1,0 +1,14 @@
+{
+  "name": "makerchecker-governed-langchain-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable example: govern real LangChain tools through MakerChecker (wrap, don't migrate).",
+  "scripts": {
+    "demo": "node governed-langchain-demo.mjs"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.49",
+    "zod": "^4.4.3"
+  }
+}

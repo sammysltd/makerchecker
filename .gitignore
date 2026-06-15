@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+packages/server/data/
+
+# Internal / not part of the public repo (kept locally)
+CLAUDE.md
+docs/positioning/
+
+# Local-only docker override (recording/dev aid)
+docker-compose.override.yml
