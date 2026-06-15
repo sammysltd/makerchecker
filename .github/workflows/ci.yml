@@ -58,6 +58,10 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
+          # gitleaks-action@v2 requires a token to scan pull_request events
+          # (without it, every PR fails the secret scan). The auto-provided
+          # token is read-only on Dependabot PRs, which is all the scan needs.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     runs-on: ubuntu-latest
