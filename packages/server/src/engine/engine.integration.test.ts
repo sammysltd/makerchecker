@@ -618,6 +618,66 @@ describe("M3 — segregation of duties", () => {
     );
     expect(rows.every((r) => r.status === "completed")).toBe(true);
   });
+
+  // ADVERSARIAL: revoking an SoD constraint must unblock FUTURE runs without
+  // rewriting history — the original violation's audit event survives. A control
+  // that, once lifted, also erased the evidence that it ever fired would be a
+  // forgery primitive; revocation is forward-only, the chain is append-only.
+  it("revoking a constraint unblocks new runs but never erases the original violation", async () => {
+    await seedAgent("recon-preparer-rev", "preparer-rev-role");
+    await seedAgent("recon-approver-rev", "approver-rev-role");
+    await seedSkill("prepare-recon-rev@1", async (i) => ({ ...i, prepared: true }));
+    await seedSkill("approve-recon-rev@1", async (i) => ({ ...i, approved: true }));
+    await grant("recon-preparer-rev", "prepare-recon-rev@1");
+    await grant("recon-approver-rev", "approve-recon-rev@1");
+
+    await db.pool.query(
+      `INSERT INTO sod_constraints (role_a_id, role_b_id, description)
+       SELECT least(p.id, a.id), greatest(p.id, a.id), 'maker-checker: prepare vs approve (revocable)'
+         FROM roles p, roles a
+        WHERE p.name = 'preparer-rev-role' AND a.name = 'approver-rev-role'`,
+    );
+
+    // A cross-role flow: the approver acts first, then the preparer — the SoD
+    // pair binds, so the preparer's step must be blocked while active.
+    const { flowVersionId: crossFlow } = await publishFlowVersion(db.pool, {
+      definition: {
+        name: "revocable-cross-role-flow",
+        steps: [
+          { key: "approve_first", agent: "recon-approver-rev", skills: ["approve-recon-rev@1"] },
+          { key: "then_prepare", agent: "recon-preparer-rev", skills: ["prepare-recon-rev@1"] },
+        ],
+      },
+      actor: USER,
+    });
+
+    // 1. With the constraint ACTIVE, the cross-role run is blocked.
+    const blockedRun = await startRun(ctx, { flowVersionId: crossFlow, triggeredBy: USER });
+    expect(await waitForRunStatus(blockedRun, ["failed"])).toBe("failed");
+    expect(await eventTypes(blockedRun)).toContain("enforcement.sod_violation");
+
+    // 2. Revoke (never delete) the constraint.
+    const revoked = await db.pool.query(
+      `UPDATE sod_constraints SET revoked_at = now()
+        WHERE description = 'maker-checker: prepare vs approve (revocable)' AND revoked_at IS NULL`,
+    );
+    expect(revoked.rowCount).toBe(1);
+
+    // 3. A NEW cross-role run now COMPLETES — revocation is forward-effective.
+    const allowedRun = await startRun(ctx, { flowVersionId: crossFlow, triggeredBy: USER });
+    expect(await waitForRunStatus(allowedRun, ["completed", "failed"])).toBe("completed");
+    expect(await eventTypes(allowedRun)).not.toContain("enforcement.sod_violation");
+
+    // 4. The ORIGINAL run's violation event is still on the chain — revocation
+    //    changed policy going forward, it did NOT rewrite what already happened.
+    const { rows } = await db.pool.query(
+      "SELECT payload FROM audit_events WHERE run_id = $1 AND event_type = 'enforcement.sod_violation'",
+      [blockedRun],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.payload).toMatchObject({ code: "sod_violation" });
+    expect((await verifyChain(db.pool)).ok).toBe(true);
+  });
 });
 
 describe("M3 — high-risk skills require gates", () => {
