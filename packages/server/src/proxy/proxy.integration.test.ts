@@ -721,3 +721,170 @@ describe("skillRef canonicalization — a non-canonical ref cannot skip the limi
     if (!bypass.allowed) expect(bypass.code).toBe("skill_not_found");
   });
 });
+
+describe("argument-level grant policy through the proxy route layer", () => {
+  // Seeds two roles whose limits carry the new per-skill argument predicates
+  // (allowlist + pathScope), each with its own agent / granted low-risk skill,
+  // then drives the SAME /check route the rest of this suite uses. The point of
+  // these tests is the ROUTE layer: a check POSTed over HTTP with an off-list
+  // destination / out-of-prefix path must surface the new ProxyDenialCode values
+  // (limit_allowlist / limit_path and their _unreadable twins) in the JSON body
+  // at status 200 — a denial is a decision, not an error — and audit each as
+  // enforcement.limit_violation {via:'proxy', code}. Limits live in roles.limits
+  // keyed by the canonical skillRef, the same place getRoleLimits reads.
+  beforeAll(async () => {
+    await db.pool.query(
+      `INSERT INTO roles (name, limits) VALUES
+       ('px-allowlist-role', $1::jsonb),
+       ('px-pathscope-role', $2::jsonb)`,
+      [
+        JSON.stringify({
+          skills: { "px-send@1": { allowlist: { field: "destination", values: ["acct-ok"] } } },
+        }),
+        JSON.stringify({
+          skills: { "px-write@1": { pathScope: { field: "path", prefix: "/srv/project" } } },
+        }),
+      ],
+    );
+    await db.pool.query(
+      `INSERT INTO agents (name, role_id, status)
+       SELECT v.name, r.id, 'active'
+         FROM (VALUES
+           ('px-sender', 'px-allowlist-role'),
+           ('px-writer', 'px-pathscope-role')
+         ) AS v(name, role_name)
+         JOIN roles r ON r.name = v.role_name`,
+    );
+    // Low-risk skills: the high-risk gate must NOT pre-empt the argument check.
+    for (const skill of ["px-send", "px-write"]) {
+      await db.pool.query(
+        `INSERT INTO skills (name, version, input_schema, output_schema, implementation, risk_tier)
+         VALUES ($1, 1, '{}', '{}', '{"type":"local"}', 'low')`,
+        [skill],
+      );
+    }
+    for (const [roleName, skillName] of [
+      ["px-allowlist-role", "px-send"],
+      ["px-pathscope-role", "px-write"],
+    ]) {
+      await db.pool.query(
+        `INSERT INTO role_skill_grants (role_id, skill_id)
+         SELECT r.id, s.id FROM roles r, skills s
+          WHERE r.name = $1 AND s.name = $2 AND s.version = 1`,
+        [roleName, skillName],
+      );
+    }
+  }, 60_000);
+
+  async function limitEvent(sessionId: string) {
+    const { rows } = await db.pool.query<{ payload: Record<string, unknown> }>(
+      `SELECT payload FROM audit_events
+        WHERE event_type = 'enforcement.limit_violation' AND entity_id = $1`,
+      [sessionId],
+    );
+    return rows;
+  }
+
+  it("denies an off-list destination over the route: 200 {allowed:false, code:'limit_allowlist'}", async () => {
+    const sessionId = await openSession("allowlist-offlist");
+    const res = await check(sessionId, "px-sender", "px-send@1", { destination: "acct-evil" });
+    // A denial is a 200 decision so SDK wrappers branch without exception plumbing.
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ allowed: false, code: "limit_allowlist" });
+    expect(res.json().reason).toContain("allowlist");
+
+    // The denial left a denied action row and a proxy-tagged limit-violation event.
+    expect(await sessionActions(sessionId)).toEqual([
+      { skill_ref: "px-send@1", decision: "denied" },
+    ]);
+    const events = await limitEvent(sessionId);
+    expect(events).toHaveLength(1);
+    expect(events[0].payload).toMatchObject({
+      via: "proxy",
+      sessionId,
+      code: "limit_allowlist",
+      agentName: "px-sender",
+      skillRef: "px-send@1",
+    });
+  });
+
+  it("denies a missing/non-string destination as limit_allowlist_unreadable (fail closed)", async () => {
+    const sessionId = await openSession("allowlist-unreadable");
+    // No 'destination' field at all: the allowlist cannot be read, so it denies.
+    const missing = await check(sessionId, "px-sender", "px-send@1", { other: "x" });
+    expect(missing.statusCode).toBe(200);
+    expect(missing.json()).toMatchObject({ allowed: false, code: "limit_allowlist_unreadable" });
+
+    // Present but not a string is equally unreadable.
+    const nonString = await check(sessionId, "px-sender", "px-send@1", { destination: 7 });
+    expect(nonString.json()).toMatchObject({
+      allowed: false,
+      code: "limit_allowlist_unreadable",
+    });
+  });
+
+  it("allows an on-list destination: the allowlist gates the value, not the skill", async () => {
+    const sessionId = await openSession("allowlist-onlist");
+    const res = await check(sessionId, "px-sender", "px-send@1", { destination: "acct-ok" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().allowed).toBe(true);
+    expect(await sessionActions(sessionId)).toEqual([
+      { skill_ref: "px-send@1", decision: "allowed" },
+    ]);
+  });
+
+  it("denies an out-of-prefix path over the route: 200 {allowed:false, code:'limit_path'}", async () => {
+    const sessionId = await openSession("pathscope-outside");
+    const res = await check(sessionId, "px-writer", "px-write@1", { path: "/etc/passwd" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ allowed: false, code: "limit_path" });
+    expect(res.json().reason).toContain("/srv/project");
+
+    expect(await sessionActions(sessionId)).toEqual([
+      { skill_ref: "px-write@1", decision: "denied" },
+    ]);
+    const events = await limitEvent(sessionId);
+    expect(events).toHaveLength(1);
+    expect(events[0].payload).toMatchObject({
+      via: "proxy",
+      sessionId,
+      code: "limit_path",
+      agentName: "px-writer",
+      skillRef: "px-write@1",
+    });
+  });
+
+  it("denies traversal that escapes the prefix as limit_path (no startsWith bypass)", async () => {
+    const sessionId = await openSession("pathscope-traversal");
+    // Lexically under the prefix but normalizes out of it via '..' — must deny.
+    const res = await check(sessionId, "px-writer", "px-write@1", {
+      path: "/srv/project/../../etc/shadow",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ allowed: false, code: "limit_path" });
+  });
+
+  it("denies a missing/empty/non-string path as limit_path_unreadable (fail closed)", async () => {
+    const sessionId = await openSession("pathscope-unreadable");
+    const missing = await check(sessionId, "px-writer", "px-write@1", { other: "x" });
+    expect(missing.json()).toMatchObject({ allowed: false, code: "limit_path_unreadable" });
+
+    const empty = await check(sessionId, "px-writer", "px-write@1", { path: "" });
+    expect(empty.json()).toMatchObject({ allowed: false, code: "limit_path_unreadable" });
+
+    const nonString = await check(sessionId, "px-writer", "px-write@1", { path: 42 });
+    expect(nonString.json()).toMatchObject({ allowed: false, code: "limit_path_unreadable" });
+  });
+
+  it("allows a path under the prefix: the scope gates the value, not the skill", async () => {
+    const sessionId = await openSession("pathscope-inside");
+    const res = await check(sessionId, "px-writer", "px-write@1", {
+      path: "/srv/project/reports/q3.csv",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().allowed).toBe(true);
+    expect(await sessionActions(sessionId)).toEqual([
+      { skill_ref: "px-write@1", decision: "allowed" },
+    ]);
+  });
+});

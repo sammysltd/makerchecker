@@ -54,6 +54,31 @@ const SkillLimitConfig = Type.Object(
     maxInvocationsPerRun: Type.Optional(Type.Integer({ minimum: 0 })),
     maxAmountPerInvocation: Type.Optional(Type.Number({ minimum: 0 })),
     amountField: Type.Optional(Type.String({ minLength: 1 })),
+    // Destination allowlist: the call's `field` must be a string in `values`.
+    // `minItems: 1` rejects an empty list at write time (an empty allowlist would
+    // deny everything — a footgun the runtime also fails closed on).
+    allowlist: Type.Optional(
+      Type.Object(
+        {
+          field: Type.String({ minLength: 1 }),
+          values: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
+        },
+        { additionalProperties: false },
+      ),
+    ),
+    // Path scope: the call's `field` must be a path under `prefix`, no traversal.
+    // The prefix must be ABSOLUTE and contain no `..` segment: a relative or
+    // upward-escaping prefix has no well-defined containment root and is a
+    // footgun (rejected at write time; isPathWithinPrefix also fails closed on it).
+    pathScope: Type.Optional(
+      Type.Object(
+        {
+          field: Type.String({ minLength: 1 }),
+          prefix: Type.String({ minLength: 1, pattern: "^/(?!.*/\\.\\.(?:/|$)).*$" }),
+        },
+        { additionalProperties: false },
+      ),
+    ),
   },
   { additionalProperties: false },
 );

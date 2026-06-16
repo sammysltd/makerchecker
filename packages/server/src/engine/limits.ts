@@ -7,15 +7,24 @@ import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
  *
  * Shape:
  *   {
- *     skills?: { "<name@version>": { maxInvocationsPerRun?, maxAmountPerInvocation?, amountField? } },
+ *     skills?: { "<name@version>": {
+ *       maxInvocationsPerRun?, maxAmountPerInvocation?, amountField?,
+ *       allowlist?: { field, values[] }, pathScope?: { field, prefix }
+ *     } },
  *     run?:    { maxSkillInvocations?, maxTokens? }
  *   }
+ *
+ * Per-skill argument policy (evaluated against the call's input, the same place
+ * the amount cap reads): `allowlist` constrains a field's value to a fixed set
+ * (a destination/recipient allowlist); `pathScope` constrains a field's value to
+ * a directory prefix and refuses traversal out of it. Both gate the ACTION's
+ * arguments, not just which skill may run.
  *
  * Counting is conservative: invocation counts come from audit_events
  * `skill.invoked` rows for the run — ALL attempts including errors. Token
  * usage sums the `llm.call` usage payloads for the run. FAIL CLOSED: a
- * configured amount limit with a missing or non-numeric amount field denies
- * the call; an unreadable limit value denies everything it governs.
+ * configured amount/allowlist/path limit with a missing or wrong-typed input
+ * field denies the call; an unreadable limit value denies everything it governs.
  */
 
 export type LimitViolationCode =
@@ -23,7 +32,11 @@ export type LimitViolationCode =
   | "limit_amount"
   | "limit_amount_unreadable"
   | "limit_tokens"
-  | "limit_run_invocations";
+  | "limit_run_invocations"
+  | "limit_allowlist"
+  | "limit_allowlist_unreadable"
+  | "limit_path"
+  | "limit_path_unreadable";
 
 export class LimitViolationError extends Error {
   override name = "LimitViolationError";
@@ -39,6 +52,67 @@ export interface SkillLimitConfig {
   maxInvocationsPerRun?: number;
   maxAmountPerInvocation?: number;
   amountField?: string;
+  /**
+   * Destination allowlist: the call's `field` value must be a string present in
+   * `values`. Off the list, missing, or not a string is denied (fail closed).
+   * Models "transfer only to an approved address", "post only to these channels".
+   */
+  allowlist?: { field: string; values: string[] };
+  /**
+   * Path scope: the call's `field` value must be a path under `prefix`, with no
+   * traversal out of it. Outside the prefix, traversal, missing, or not a string
+   * is denied (fail closed). Models "may only touch files under the project dir".
+   */
+  pathScope?: { field: string; prefix: string };
+}
+
+/**
+ * Normalize a POSIX-style path WITHOUT touching the filesystem: collapse `.` and
+ * `..` segments and redundant separators, treating `\` as a separator too so a
+ * Windows-style `..\..\x` cannot evade a `/`-based check. An absolute path can
+ * never `..` above its root; a relative path that escapes upward keeps a leading
+ * `..` so the containment check below rejects it.
+ */
+export function normalizePath(input: string): string {
+  const raw = input.replace(/\\/g, "/");
+  const isAbsolute = raw.startsWith("/");
+  const out: string[] = [];
+  for (const segment of raw.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (out.length > 0 && out[out.length - 1] !== "..") out.pop();
+      else if (!isAbsolute) out.push("..");
+      // an absolute path drops ".." at the root: it cannot escape "/".
+      continue;
+    }
+    out.push(segment);
+  }
+  return (isAbsolute ? "/" : "") + out.join("/");
+}
+
+/**
+ * True when `value` resolves to `prefix` itself or a path beneath it. Both are
+ * normalized first, so traversal (`../`), redundant separators, and trailing
+ * slashes cannot smuggle a path out of the prefix. A relative value is never
+ * inside an absolute prefix and vice versa (different roots never match). An
+ * empty prefix is inside nothing (fail closed).
+ *
+ * A containment root must be a CONCRETE location, never one that itself escapes
+ * upward: a prefix that normalizes to `..` or `../x` has no well-defined inside,
+ * so nothing is within it (a textual startsWith could not tell "deeper under the
+ * prefix" from "further up past it" for a pure-traversal prefix). Likewise a
+ * value that escapes upward is never contained. Both are rejected, fail closed.
+ * The admin write schema additionally requires the prefix to be absolute and
+ * traversal-free, so this guard is defense in depth for direct callers.
+ */
+export function isPathWithinPrefix(value: string, prefix: string): boolean {
+  const v = normalizePath(value);
+  const p = normalizePath(prefix);
+  if (p === "" || p === ".." || p.startsWith("../")) return false;
+  if (v === ".." || v.startsWith("../")) return false;
+  if (v === p) return true;
+  const base = p.endsWith("/") ? p : `${p}/`;
+  return v.startsWith(base);
 }
 
 export interface RoleLimits {
@@ -158,6 +232,43 @@ export function assertSkillLimits(
       throw new LimitViolationError(
         "limit_amount",
         `skill "${skillRef}" amount ${value} exceeds the per-invocation limit of ${max}`,
+      );
+    }
+  }
+  if (cfg.allowlist !== undefined) {
+    const { field, values } = cfg.allowlist;
+    const value = input[field];
+    if (typeof value !== "string") {
+      throw new LimitViolationError(
+        "limit_allowlist_unreadable",
+        `skill "${skillRef}" has an allowlist on "${field}" but the input field is ` +
+          `missing or not a string — denied (fail closed)`,
+      );
+    }
+    // An empty allowlist permits nothing: it denies every value (fail closed),
+    // never silently allows all. The write schema also rejects an empty list.
+    if (!values.includes(value)) {
+      throw new LimitViolationError(
+        "limit_allowlist",
+        `skill "${skillRef}" value "${value}" for "${field}" is not on the allowlist — denied`,
+      );
+    }
+  }
+  if (cfg.pathScope !== undefined) {
+    const { field, prefix } = cfg.pathScope;
+    const value = input[field];
+    if (typeof value !== "string" || value.length === 0) {
+      throw new LimitViolationError(
+        "limit_path_unreadable",
+        `skill "${skillRef}" has a path scope on "${field}" but the input field is ` +
+          `missing or not a string — denied (fail closed)`,
+      );
+    }
+    if (!isPathWithinPrefix(value, prefix)) {
+      throw new LimitViolationError(
+        "limit_path",
+        `skill "${skillRef}" path "${value}" for "${field}" is outside the allowed ` +
+          `prefix "${prefix}" — denied`,
       );
     }
   }

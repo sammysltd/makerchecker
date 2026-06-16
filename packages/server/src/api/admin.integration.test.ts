@@ -216,6 +216,152 @@ describe("roles", () => {
     expect(res.json().role.limits).toEqual(limits);
   });
 
+  it("saves per-skill allowlist + pathScope argument grants verbatim", async () => {
+    // The argument-level grant policy (engine/limits.ts assertSkillLimits): a
+    // destination allowlist and a path scope, persisted exactly as written so the
+    // runtime fail-closed checks enforce the operator's intent, not a coerced
+    // approximation of it.
+    const limits = {
+      skills: {
+        "transfer@1": {
+          maxAmountPerInvocation: 5000,
+          amountField: "amount",
+          allowlist: { field: "destination", values: ["0xSAFE", "0xTREASURY"] },
+          pathScope: { field: "path", prefix: "/workspace/project" },
+        },
+      },
+    };
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/roles",
+      headers: auth,
+      payload: { name: "arg-grant-role", limits },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().role.limits).toEqual(limits);
+    // Round-trips on read-back too: the saved row equals what was written.
+    const back = await app.inject({
+      method: "GET",
+      url: `/api/roles/${res.json().role.id}`,
+      headers: auth,
+    });
+    expect(back.json().role.limits).toEqual(limits);
+  });
+
+  it("400s every malformed allowlist/pathScope shape before save", async () => {
+    // Argument-grant analogue of the malformed-limits gate above: each case is an
+    // allowlist or pathScope that the runtime would either deny silently at
+    // runtime or (worse) coerce into a bogus grant. Validation must reject all of
+    // them with a 400 BEFORE the row is written. Heavy/adversarial coverage of the
+    // new SkillLimitConfig predicates and the absolute-prefix pattern.
+    const sk = (cfg: unknown) => ({ skills: { "pay@1": cfg } });
+    const malformed: Array<[string, unknown]> = [
+      // allowlist.values must be a non-empty array of strings (minItems: 1).
+      ["allowlist.values is empty []", sk({ allowlist: { field: "destination", values: [] } })],
+      [
+        "allowlist.values has a non-string item [1]",
+        sk({ allowlist: { field: "destination", values: [1] } }),
+      ],
+      [
+        "allowlist.values mixes a non-string item ['ok', 2]",
+        sk({ allowlist: { field: "destination", values: ["ok", 2] } }),
+      ],
+      [
+        "allowlist.values has an empty-string item",
+        sk({ allowlist: { field: "destination", values: [""] } }),
+      ],
+      // values supplied as a single string: the strict (coercion-off) gate must
+      // reject it, never wrap a scalar into a one-element array.
+      [
+        "allowlist.values is a single string (must not coerce to array)",
+        sk({ allowlist: { field: "destination", values: "0xSAFE" } }),
+      ],
+      // allowlist.field is required and non-empty.
+      ["allowlist missing field", sk({ allowlist: { values: ["0xSAFE"] } })],
+      [
+        "allowlist.field is empty",
+        sk({ allowlist: { field: "", values: ["0xSAFE"] } }),
+      ],
+      // unknown nested key under allowlist (additionalProperties: false).
+      [
+        "allowlist has an unknown nested key",
+        sk({ allowlist: { field: "destination", values: ["0xSAFE"], extra: 1 } }),
+      ],
+      // pathScope.prefix is required, non-empty, absolute, and traversal-free.
+      ["pathScope.prefix is empty", sk({ pathScope: { field: "path", prefix: "" } })],
+      ["pathScope missing prefix", sk({ pathScope: { field: "path" } })],
+      [
+        "pathScope.prefix is relative ('..')",
+        sk({ pathScope: { field: "path", prefix: ".." } }),
+      ],
+      [
+        "pathScope.prefix is relative ('../shared')",
+        sk({ pathScope: { field: "path", prefix: "../shared" } }),
+      ],
+      [
+        "pathScope.prefix is relative ('data')",
+        sk({ pathScope: { field: "path", prefix: "data" } }),
+      ],
+      [
+        "pathScope.prefix has a traversal segment ('/app/../x')",
+        sk({ pathScope: { field: "path", prefix: "/app/../x" } }),
+      ],
+      // pathScope.field must be a non-empty string.
+      [
+        "pathScope.field is a number",
+        sk({ pathScope: { field: 7, prefix: "/workspace" } }),
+      ],
+      ["pathScope.field is empty", sk({ pathScope: { field: "", prefix: "/workspace" } })],
+      // unknown nested key under pathScope (additionalProperties: false).
+      [
+        "pathScope has an unknown nested key",
+        sk({ pathScope: { field: "path", prefix: "/workspace", extra: 1 } }),
+      ],
+      // wrong type for the whole predicate: allowlist/pathScope must be objects.
+      ["allowlist is a string", sk({ allowlist: "0xSAFE" })],
+      ["allowlist is an array", sk({ allowlist: ["0xSAFE"] })],
+      ["pathScope is a string", sk({ pathScope: "/workspace" })],
+      ["pathScope is an array", sk({ pathScope: ["/workspace"] })],
+    ];
+    for (const [label, limits] of malformed) {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/roles",
+        headers: auth,
+        payload: { name: `argbad-${label.replace(/[^a-z0-9]+/gi, "-")}`, limits },
+      });
+      expect(res.statusCode, `${label} should be rejected 400`).toBe(400);
+    }
+    // None of the rejected roles were written.
+    const list = await app.inject({ method: "GET", url: "/api/roles", headers: auth });
+    expect(list.json().roles.some((r: { name: string }) => r.name.startsWith("argbad-"))).toBe(
+      false,
+    );
+  });
+
+  it("accepts a config built from every SkillLimitConfig field (lockstep guard)", async () => {
+    // The route schema must stay in lockstep with the SkillLimitConfig TS type in
+    // engine/limits.ts: a config that names EVERY field must pass the write schema.
+    // If a TS field were added without the matching TypeBox field, this object
+    // would carry an unknown key and be rejected by additionalProperties: false,
+    // failing this test — the alarm that keeps schema and type in sync.
+    const everyField = {
+      maxInvocationsPerRun: 3,
+      maxAmountPerInvocation: 1000,
+      amountField: "amount_cents",
+      allowlist: { field: "destination", values: ["0xSAFE", "0xTREASURY"] },
+      pathScope: { field: "path", prefix: "/workspace/project" },
+    };
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/roles",
+      headers: auth,
+      payload: { name: "lockstep-role", limits: { skills: { "pay@1": everyField } } },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().role.limits.skills["pay@1"]).toEqual(everyField);
+  });
+
   it("saves a role with no limits (defaults to {})", async () => {
     const res = await app.inject({
       method: "POST",

@@ -37,7 +37,11 @@ export type ProxyDenialCode =
   | "limit_amount"
   | "limit_amount_unreadable"
   | "limit_tokens"
-  | "limit_run_invocations";
+  | "limit_run_invocations"
+  | "limit_allowlist"
+  | "limit_allowlist_unreadable"
+  | "limit_path"
+  | "limit_path_unreadable";
 
 export type ProxyCheckResult =
   | { allowed: true; checkId: string }

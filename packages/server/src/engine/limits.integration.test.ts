@@ -567,3 +567,194 @@ describe("proxy sessions honour per-skill limits", () => {
     });
   });
 });
+
+describe("proxy sessions honour per-skill argument grant policy (allowlist / pathScope)", () => {
+  const ACTOR = { type: "user" as const, name: "argpolicy-tester" };
+  let sessionId: string;
+
+  beforeAll(async () => {
+    const roleId = await seedRole("px-arg-role", {
+      skills: {
+        // destination allowlist on a wire/transfer-style skill
+        "px-allow@1": {
+          maxInvocationsPerRun: 5,
+          allowlist: { field: "destination", values: ["acct-approved-1", "acct-approved-2"] },
+        },
+        // path scope on a file-touching skill
+        "px-scope@1": {
+          maxInvocationsPerRun: 5,
+          pathScope: { field: "path", prefix: "/srv/project" },
+        },
+      },
+    });
+    await seedAgent("px-arg-agent", roleId);
+    for (const ref of ["px-allow@1", "px-scope@1"]) {
+      await seedSkill(ref, async (i) => i);
+      await grant("px-arg-agent", ref);
+    }
+    const session = await openSession(db.pool, { label: "argpolicy-session", actor: ACTOR });
+    sessionId = session.id;
+  });
+
+  function check(skillRef: string, input?: Record<string, unknown>) {
+    return checkAndAuthorize(db.pool, {
+      sessionId,
+      agentName: "px-arg-agent",
+      skillRef,
+      actor: ACTOR,
+      ...(input !== undefined ? { input } : {}),
+    });
+  }
+
+  async function lastLimitViolation(): Promise<Record<string, unknown> | undefined> {
+    const { rows } = await db.pool.query<{ payload: Record<string, unknown> }>(
+      `SELECT payload FROM audit_events
+        WHERE event_type = 'enforcement.limit_violation'
+          AND entity_type = 'proxy_session' AND entity_id = $1
+        ORDER BY seq DESC LIMIT 1`,
+      [sessionId],
+    );
+    return rows[0]?.payload;
+  }
+
+  it("allowlist: an on-list destination is allowed, an off-list one is denied and audited", async () => {
+    expect(await check("px-allow@1", { destination: "acct-approved-1" })).toMatchObject({
+      allowed: true,
+    });
+
+    const off = await check("px-allow@1", { destination: "acct-attacker" });
+    expect(off).toMatchObject({ allowed: false, code: "limit_allowlist" });
+    expect(await lastLimitViolation()).toMatchObject({
+      via: "proxy",
+      code: "limit_allowlist",
+      skillRef: "px-allow@1",
+    });
+  });
+
+  it("allowlist: a missing / non-string field fails closed as unreadable", async () => {
+    // No input at all → field missing → unreadable.
+    expect(await check("px-allow@1")).toMatchObject({
+      allowed: false,
+      code: "limit_allowlist_unreadable",
+    });
+    // Field present but not a string → unreadable.
+    expect(await check("px-allow@1", { destination: 12345 })).toMatchObject({
+      allowed: false,
+      code: "limit_allowlist_unreadable",
+    });
+  });
+
+  it("pathScope: in-prefix allowed; out-of-prefix and traversal denied; missing fails closed", async () => {
+    // In-prefix path is allowed.
+    expect(await check("px-scope@1", { path: "/srv/project/reports/q1.csv" })).toMatchObject({
+      allowed: true,
+    });
+
+    // Outside the prefix → limit_path.
+    const outside = await check("px-scope@1", { path: "/etc/passwd" });
+    expect(outside).toMatchObject({ allowed: false, code: "limit_path" });
+    expect(await lastLimitViolation()).toMatchObject({
+      via: "proxy",
+      code: "limit_path",
+      skillRef: "px-scope@1",
+    });
+
+    // Traversal that escapes the prefix → limit_path.
+    expect(
+      await check("px-scope@1", { path: "/srv/project/../../etc/shadow" }),
+    ).toMatchObject({ allowed: false, code: "limit_path" });
+
+    // Missing / empty / non-string path → unreadable (fail closed).
+    expect(await check("px-scope@1")).toMatchObject({
+      allowed: false,
+      code: "limit_path_unreadable",
+    });
+    expect(await check("px-scope@1", { path: "" })).toMatchObject({
+      allowed: false,
+      code: "limit_path_unreadable",
+    });
+    expect(await check("px-scope@1", { path: 999 })).toMatchObject({
+      allowed: false,
+      code: "limit_path_unreadable",
+    });
+  });
+
+  it("an argument-policy denial does NOT consume the per-skill invocation slot", async () => {
+    // Fresh role/agent/session so the invocation count starts at zero.
+    const roleId = await seedRole("px-arg-cap-role", {
+      skills: {
+        "px-arg-cap@1": {
+          maxInvocationsPerRun: 1,
+          allowlist: { field: "destination", values: ["ok-dest"] },
+        },
+      },
+    });
+    await seedAgent("px-arg-cap-agent", roleId);
+    await seedSkill("px-arg-cap@1", async (i) => i);
+    await grant("px-arg-cap-agent", "px-arg-cap@1");
+    const session = await openSession(db.pool, { label: "argpolicy-cap-session", actor: ACTOR });
+
+    const capCheck = (input?: Record<string, unknown>) =>
+      checkAndAuthorize(db.pool, {
+        sessionId: session.id,
+        agentName: "px-arg-cap-agent",
+        skillRef: "px-arg-cap@1",
+        actor: ACTOR,
+        ...(input !== undefined ? { input } : {}),
+      });
+
+    // An off-list denial must not burn the only allowed slot…
+    expect(await capCheck({ destination: "attacker" })).toMatchObject({
+      allowed: false,
+      code: "limit_allowlist",
+    });
+    // …so the single permitted invocation is still available.
+    expect(await capCheck({ destination: "ok-dest" })).toMatchObject({ allowed: true });
+    // …and only now is the cap genuinely exhausted.
+    expect(await capCheck({ destination: "ok-dest" })).toMatchObject({
+      allowed: false,
+      code: "limit_invocations",
+    });
+  });
+
+  it("DEFENSIVE: a non-LimitViolationError from a malformed limits row rolls back, never allows", async () => {
+    // Write an invalid shape directly to roles.limits, bypassing the admin write
+    // schema: allowlist.values is a number (no `.includes` method), so
+    // assertSkillLimits throws a TypeError, a non-LimitViolationError (a string
+    // would still have `.includes` and fail closed as limit_allowlist instead).
+    // The proxy must let the TypeError propagate (rollback), NOT swallow it.
+    const { rows } = await db.pool.query<{ id: string }>(
+      `INSERT INTO roles (name, limits) VALUES ($1, $2) RETURNING id`,
+      [
+        "px-arg-malformed-role",
+        JSON.stringify({
+          skills: { "px-arg-bad@1": { allowlist: { field: "destination", values: 123 } } },
+        }),
+      ],
+    );
+    const roleId = rows[0]!.id;
+    await seedAgent("px-arg-bad-agent", roleId);
+    await seedSkill("px-arg-bad@1", async (i) => i);
+    await grant("px-arg-bad-agent", "px-arg-bad@1");
+    const session = await openSession(db.pool, { label: "argpolicy-bad-session", actor: ACTOR });
+
+    await expect(
+      checkAndAuthorize(db.pool, {
+        sessionId: session.id,
+        agentName: "px-arg-bad-agent",
+        skillRef: "px-arg-bad@1",
+        actor: ACTOR,
+        input: { destination: "anything" },
+      }),
+    ).rejects.toThrow();
+
+    // The transaction rolled back: no 'allowed' proxy_actions row was persisted,
+    // so a thrown non-limit error never leaks through as an authorization.
+    const allowed = await db.pool.query(
+      `SELECT 1 FROM proxy_actions
+        WHERE session_id = $1 AND skill_ref = 'px-arg-bad@1' AND decision = 'allowed'`,
+      [session.id],
+    );
+    expect(allowed.rows).toHaveLength(0);
+  });
+});
