@@ -107,7 +107,7 @@ jobs:
         working-directory: packages/sdk-python
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       # Install from the committed uv.lock; --frozen fails if the lock is stale.
