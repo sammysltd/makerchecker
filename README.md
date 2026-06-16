@@ -4,72 +4,24 @@
 [![Release](https://img.shields.io/github/v/release/sammysltd/makerchecker?label=release)](https://github.com/sammysltd/makerchecker/releases/latest)
 [![License](https://img.shields.io/badge/license-AGPL--3.0%20core%20%2B%20Apache--2.0%20SDK-informational)](LICENSING.md)
 
-> **Your AI agent moved the money. No one approved it.**
+MakerChecker is open-source, self-hosted software that governs AI agents. It gives each agent an identity with one role, deny-by-default skill grants pinned to a specific version, segregation-of-duties constraints so the agent that proposes a consequential action cannot approve it, n-of-m human approval gates on high-risk actions, per-skill role limits including argument policy, and a hash-chained, Ed25519-signed audit log that an external party can verify offline. It is framework-agnostic: agents keep running in LangGraph, CrewAI, or the Claude Agent SDK while MakerChecker is the authorization checkpoint and the record.
 
-That is the failure MakerChecker exists to stop. The moment you let an agent act, you lose the second set of eyes that every regulated process assumes is there.
+The control plane is a Fastify server backed by Postgres. Agents reach it two ways: as a flow, where MakerChecker orchestrates sequential agent steps and approval gates, or as a proxy session, where MakerChecker authorizes and records tool calls that another framework executes. Both paths write to the same audit chain.
 
-**Maker-checker for AI agents.** The agent that proposes an action cannot be the one that approves it. An independent human signs off before the action runs, and every decision lands in a hash-chained, signed, offline-verifiable record. Open source, self-hosted, framework-agnostic.
-
-**[Try the live demo →](https://makerchecker.ai/demo/)** Watch an agent get blocked from approving its own work, a human sign off, and the audit chain verify, in your browser, no signup.
+[Live demo](https://makerchecker.ai/demo/): an agent is blocked from approving its own work, a human signs off, and the audit chain verifies, in the browser, with no signup.
 
 ![Run viewer](docs/assets/demo.gif)
 
-## In one breath
+## What it enforces
 
-- **Who it's for:** teams running AI agents on consequential actions (payments, alert escalation, case decisions) where someone will eventually ask "who approved this?"
-- **What it does:** the agent proposes, an independent human approves, the action runs only then. Deny by default. The same actor can never be both maker and checker.
-- **What you walk away with:** a hash-chained, Ed25519-signed evidence bundle a regulator, an auditor, or opposing counsel can verify with no access to your systems.
-- **Why not your framework's built-in approvals:** those live inside one runtime and ask you to trust their logs. MakerChecker is one authorization plane and one verifiable audit chain across every framework you run ([more](#why-not-the-built-in-approvals-your-framework-already-has)).
-- **How to try it:** `docker compose up`, then drive a seeded reconciliation flow that parks at a human gate ([Quickstart](#quickstart)).
+- **Deny by default.** A skill runs only if the agent's role holds a current grant to that exact skill version. Revocation takes effect at the next enforcement check.
+- **Segregation of duties.** Role-pair constraints are checked at decision time and at invocation time. The same actor cannot be maker and checker on one run.
+- **Human approval gates.** A high-risk skill cannot run without a gate. The run parks until a human decides. Rejection fails the run.
+- **n-of-m named approvals.** Gates support quorums, named approver lists, and requester-cannot-approve by default. Unauthenticated or out-of-list decisions fail closed.
+- **Role limits and budgets.** Per-skill invocation caps, amount ceilings that fail closed on unreadable inputs, and run-level invocation and token budgets.
+- **Verifiable audit.** Every transition lands in a genesis-rooted, hash-linked, append-only log, exportable as an Ed25519-signed bundle that verifies with no access to the running system.
 
-## Start where your agents are
-
-Your agents already live in LangGraph, CrewAI, or the Claude Agent SDK. Don't migrate them, wrap them. A proxy session makes MakerChecker the authorization checkpoint and the evidentiary record while your framework keeps executing the tools.
-
-For LangChain/LangGraph there is a real connector, [`@makerchecker/connector-langchain`](packages/connector-langchain): it wraps a `StructuredTool` and returns a governed tool with the **same name, description, and schema**, a drop-in for any `ToolNode` or agent executor.
-
-```js
-import { createClient } from "@makerchecker/sdk";
-import { governLangChainTool } from "@makerchecker/connector-langchain";
-
-const client = createClient({ baseUrl: "http://localhost:3000", apiKey: "mk_..." });
-const { session } = await client.proxy.openSession({ label: "langgraph-run" });
-
-// Wrap the LangChain tool you already have, no re-platforming, schema preserved:
-const governedMatch = governLangChainTool(
-  client,
-  { sessionId: session.id, agentName: "recon-preparer", skillRef: "txn-match@1" },
-  matchTxns, // your existing DynamicStructuredTool
-);
-// new ToolNode([governedMatch]) - the graph is unchanged.
-```
-
-Any other framework wraps a plain function with `governedTool` from the SDK. Every call now gets a deny-by-default grant check, segregation-of-duties enforcement across the session, and a hash-chained audit entry; denied calls throw `GovernanceDeniedError` before your tool runs. Runnable LangChain demo: [examples/connectors/langchain](examples/connectors/langchain/README.md). Other framework recipes: [examples/middleware](examples/middleware/README.md).
-
-## Why
-
-- **Authorization is structural, not statistical.** Agents hold roles, roles hold versioned skill grants, deny by default. The same agent provably cannot be maker and checker on one run.
-- **Every action lands in a hash-chained audit log.** Export a signed bundle a regulator can verify offline, with no access to your systems.
-- **Human approval gates are flow steps, not afterthoughts.** High-risk skills cannot run without one.
-
-## Why not the built-in approvals your framework already has?
-
-Most agent frameworks ship some kind of human-in-the-loop pause. Two things they don't give you:
-
-- **A cross-platform system of record.** Built-in approvals live inside one framework's runtime. The moment you run agents across LangGraph *and* CrewAI *and* the Claude Agent SDK, you have three approval mechanisms and no single ledger of who was allowed to do what, when, and who signed off. MakerChecker is one authorization plane and one audit chain across all of them.
-- **Evidence that doesn't require trusting you.** "Trust our logs" is not independent verification. A framework's approval record is a row in a database the same process can rewrite. MakerChecker's chain is genesis-rooted, hash-linked, append-only at the trigger and privilege level, and exported under a signature you can verify with no access to the running system. The point is precisely that a third party does not have to take your word for it.
-
-Built-in approvals are a feature inside one loop. A maker-checker control plane that survives an examiner, a lawsuit, or a swap of agent framework is a different thing, and not one a single framework's pause can be.
-
-## Graduate to fully-governed orchestration
-
-Proxy sessions govern tools inside someone else's loop, which is exactly why high-risk skills are refused there. When a workflow needs a human gate, run it as a governed flow: sequential agent steps and approval gates, versioned and immutable once published, with the same audit chain underneath.
-
-- **Approval gates** park the run until a human decides; rejection fails the run.
-- **n-of-m named approvals**: quorums, named approver lists, and requester-cannot-approve by default. Unauthenticated or out-of-list decisions fail closed.
-- **Role limits & budgets**: per-skill invocation caps, amount ceilings that fail closed on unreadable inputs, run-level invocation and token budgets.
-
-One evidentiary spine on both paths: a hash-chained, append-only log and a signed, offline-verifiable export.
+Concept reference: [docs/concepts.md](docs/concepts.md). Audit chain and bundle format: [docs/audit-spec.md](docs/audit-spec.md).
 
 ## Quickstart
 
@@ -77,11 +29,11 @@ One evidentiary spine on both paths: a hash-chained, append-only log and a signe
 docker compose up
 ```
 
-This boots Postgres and the server on `:3000`. The compose file sets `MAKERCHECKER_SEED_DEMO=1` and `DEMO_DATA_DIR`, so first boot seeds two demos and prints a demo admin API key and a demo officer API key once.
+This boots Postgres and the server on `:3000`. The compose file sets `MAKERCHECKER_SEED_DEMO=1` and `DEMO_DATA_DIR`, so first boot seeds the demo casts and prints two API keys once: a demo admin key and a demo officer key. Copy them from the boot logs.
 
-**Daily Cash Reconciliation**: a preparer agent, a reporter agent, a maker-checker SoD constraint, and two planted exceptions in the data, `T-1009`, a supplier payment booked as −7800.00 on the statement but −7080.00 in the ledger (a transposition typo), and `T-1012`, an unidentified credit on the statement that is missing from the ledger entirely. **AML Alert Triage**: an analyst agent escalates two planted alerts (a structuring pattern, a sanctions near-match) and the run parks at a BSA-officer gate the requester cannot approve, see [the AML walkthrough](examples/aml-alert-triage/README.md).
+The seed includes a Daily Cash Reconciliation flow with a maker-checker SoD constraint and two planted exceptions in the data: `T-1009`, a supplier payment booked as -7800.00 on the statement but -7080.00 in the ledger (a transposition typo), and `T-1012`, an unidentified credit on the statement that is missing from the ledger. It also seeds an AML Alert Triage flow whose run parks at a BSA-officer gate the requester cannot approve (see [examples/aml-alert-triage](examples/aml-alert-triage/README.md)), a `self-approval-attempt` flow that SoD blocks live, and several other domain casts (MDR, PV, gross-to-net, cold-chain) listed in [examples/README.md](examples/README.md).
 
-Copy the admin API key from the boot logs and pass it as a Bearer token, or set `MAKERCHECKER_AUTH_DISABLED=1` on the server for keyless local use. The admin key triggers runs and approves the cash-reconciliation gate; the AML flow's BSA-officer gate is identity-mode (the requester cannot approve it), so decide that one with the demo officer API key.
+Pass an API key as a Bearer token, or set `MAKERCHECKER_AUTH_DISABLED=1` on the server for keyless local use. The admin key triggers runs and approves the cash-reconciliation gate. The AML flow's BSA-officer gate is identity-mode, so decide that one with the officer key.
 
 ```bash
 export H='authorization: Bearer mk_...'   # key printed at first boot
@@ -101,65 +53,183 @@ curl localhost:3000/api/runs/<runId> -H "$H"
 curl localhost:3000/api/audit/verify -H "$H"
 ```
 
-Set `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` to run the agents on a real model deciding which granted skills to call. Omit both and steps execute deterministically, so the demo works fully air-gapped. More: [docs/quickstart.md](docs/quickstart.md) and [the demo walkthrough](examples/daily-cash-reconciliation/README.md), including the seeded `self-approval-attempt` flow that SoD blocks live.
+Set `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` to run the agents on a real model that decides which granted skills to call. Omit both and steps execute deterministically, so the demo runs air-gapped. More: [docs/quickstart.md](docs/quickstart.md) and the [demo walkthrough](examples/daily-cash-reconciliation/README.md).
 
-The quickstart connects as the DB owner for simplicity. For tamper-resistance against a compromised application credential, run the server as a non-owner role that cannot disable the append-only audit triggers: [`ops/harden-db.sql`](ops/harden-db.sql) + [`docker-compose.hardened.yml`](docker-compose.hardened.yml), walkthrough in [docs/db-hardening.md](docs/db-hardening.md).
+The quickstart connects as the Postgres owner for simplicity, which can disable the append-only audit triggers. For tamper-resistance against a compromised application credential, run the server as a non-owner role using [`ops/harden-db.sql`](ops/harden-db.sql) and [`docker-compose.hardened.yml`](docker-compose.hardened.yml). Walkthrough: [docs/db-hardening.md](docs/db-hardening.md).
 
-## How it works
+## Packages
 
-Six primitives, all Postgres-backed, all versioned. Full reference: [docs/concepts.md](docs/concepts.md).
+pnpm workspaces with Turborepo. The control plane is AGPL-3.0. The integration layer (SDK, connectors, examples) is Apache-2.0, so embedding it in your own code carries no copyleft obligation.
 
-| Primitive | What it is |
-|---|---|
-| **Agent** | An identity with exactly one role and a lifecycle (`active`/`suspended`/`retired`). Like an employee. |
-| **Role** | The permission boundary. Holds versioned skill grants (deny by default), SoD constraints against other roles, and enforced limits & budgets. |
-| **Skill** | A versioned, schema-typed capability (MCP, HTTP, or local) with a risk tier. Immutable once published. |
-| **Trigger** | What starts a flow: cron, event, or manual/API. |
-| **Flow** | A versioned, sequential definition of agent steps and human approval gates. Immutable once published. |
-| **Run / Audit** | One execution of a flow. Every transition lands in a hash-chained, append-only audit log, exportable as a signed offline-verifiable bundle. |
+| Package | License | What it is |
+|---|---|---|
+| [`packages/server`](packages/server) | AGPL-3.0 | Fastify API, flow engine, workers, audit writer, demo seed, and the `cli.js` admin tool. |
+| [`packages/web`](packages/web) | AGPL-3.0 | Vite/React SPA: run viewer, approvals inbox, registry. |
+| [`packages/shared`](packages/shared) | AGPL-3.0 | Domain types, TypeBox schemas, RFC 8785 canonical JSON, and hash utilities. |
+| [`packages/sdk`](packages/sdk) | Apache-2.0 | Typed TypeScript HTTP client plus the framework-agnostic `governedTool` wrapper. |
+| [`packages/sdk-python`](packages/sdk-python) | Apache-2.0 | Typed Python HTTP client plus `governed_tool`. |
+| [`packages/connector-langchain`](packages/connector-langchain) | Apache-2.0 | `governLangChainTool` / `governToolkit` for LangChain `StructuredTool`s. |
+| [`packages/connector-claude-agent`](packages/connector-claude-agent) | Apache-2.0 | `governClaudeTool` for Claude Agent SDK custom tools. |
 
-## What makes it different
+The six governed primitives are Agent, Role, Skill, Trigger, Flow, and Run/Audit, all Postgres-backed and versioned. See [docs/concepts.md](docs/concepts.md).
 
-| | MakerChecker | Cordum | Galileo Agent Control | Observability tools |
-|---|---|---|---|---|
-| Deny-by-default grant ledger | Versioned grants per role; full permission history reconstructable | Allow-unless-policy-hits; agent identity is enterprise-paywalled | None, content rules, not permissions | None |
-| Runtime SoD enforcement | Declared role-pair constraints, enforced structurally at execution | Multi-approver routing only | None | None |
-| Signed offline-verifiable export | Core feature, [open spec](docs/audit-spec.md) | Hash chain claimed, no published spec, no signed export | None | Logs and traces, not evidence |
-| License | AGPL-3.0 core, Apache-2.0 SDK and examples | BUSL-1.1 | Apache 2.0 (Cisco-owned) | Varies |
+## Integration
 
-Guardrail products answer "is this content dangerous?" MakerChecker answers "is this actor authorized, and who approved it?" An agent that passes every content check can still execute a payment it was never authorized to touch. The two compose: run guardrails on content, run MakerChecker on authority.
+An agent's tool calls are governed through a proxy session. Open a session, then wrap each tool so every invocation calls `proxy.check` (a deny throws `GovernanceDeniedError` before the tool runs), runs the tool, and calls `proxy.record` with the output (or the error, which is rethrown). The framework keeps executing the tool. High-risk skills are refused on the proxy path; they require a flow gate.
 
-## Why now
+### TypeScript SDK
 
-On April 17, 2026 the Federal Reserve replaced SR 11-7 with SR 26-2, which explicitly scopes agentic AI out of model-risk guidance. There is currently no supervisory template for agent controls, and no rules means no safe harbor: examiners and discovery still demand evidence, and the predicate rules (21 CFR Part 11, 21 CFR 211.22, SOX, NYDFS Part 504) are date-proof. The EU AI Act's Annex III high-risk obligations moved from August 2, 2026 to December 2, 2027 (Digital Omnibus, May 7, 2026); the evidence demand did not move with them. When there are no rules, the defensible position is a verifiable record.
+`createClient` returns a typed client. `governedTool` wraps any plain function.
+
+```ts
+import { createClient, governedTool, GovernanceDeniedError } from "@makerchecker/sdk";
+
+const client = createClient({ baseUrl: "http://localhost:3000", apiKey: "mk_..." });
+const { session } = await client.proxy.openSession({ label: "recon-run" });
+
+const match = governedTool(
+  client,
+  session.id,
+  "recon-preparer",   // registered agent whose role grants are evaluated
+  "txn-match@1",       // skillRef: name@version
+  (input: { statement: unknown[]; ledger: unknown[] }) => matchTxns(input),
+);
+
+await match({ statement, ledger }); // throws GovernanceDeniedError if denied
+await client.proxy.closeSession(session.id);
+```
+
+`governedTool(client, sessionId, agentName, skillRef, fn)` returns an async function with the same input type. Generic middleware recipes: [examples/middleware](examples/middleware/README.md).
+
+### LangChain connector
+
+`governLangChainTool` wraps a `StructuredTool` and returns a `DynamicStructuredTool` with the same `name`, `description`, and `schema`, so it drops into any `ToolNode` or agent executor unchanged. `governToolkit` maps over an array of tools, assigning each its own `skillRef`; an unmapped tool throws rather than running ungoverned.
+
+```ts
+import { createClient } from "@makerchecker/sdk";
+import { governLangChainTool } from "@makerchecker/connector-langchain";
+
+const client = createClient({ baseUrl: "http://localhost:3000", apiKey: "mk_..." });
+const { session } = await client.proxy.openSession({ label: "langgraph-run" });
+
+const governedMatch = governLangChainTool(
+  client,
+  { sessionId: session.id, agentName: "recon-preparer", skillRef: "txn-match@1" },
+  matchTxns, // your existing DynamicStructuredTool
+);
+// new ToolNode([governedMatch]). The graph is unchanged.
+```
+
+`@langchain/core` is a peer dependency. Runnable demo: [examples/connectors/langchain](examples/connectors/langchain/README.md).
+
+### Claude Agent SDK connector
+
+`governClaudeTool` returns an `SdkMcpToolDefinition` (same `name`, `description`, `inputSchema`) that drops into `createSdkMcpServer`.
+
+```ts
+import { createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
+import { createClient } from "@makerchecker/sdk";
+import { governClaudeTool } from "@makerchecker/connector-claude-agent";
+import { z } from "zod";
+
+const client = createClient({ baseUrl: "http://localhost:3000", apiKey: "mk_..." });
+const { session } = await client.proxy.openSession({ label: "claude-run" });
+
+const ingest = governClaudeTool(
+  client,
+  { sessionId: session.id, agentName: "recon-preparer", skillRef: "csv-ingest@1" },
+  "csv_ingest",
+  "Ingest the statement CSVs",
+  { statementPath: z.string() },
+  async (args) => ({ content: [{ type: "text", text: await readCsv(args) }] }),
+);
+
+const server = createSdkMcpServer({ name: "governed-tools", tools: [ingest] });
+```
+
+`@anthropic-ai/claude-agent-sdk` is a peer dependency. Details: [packages/connector-claude-agent/README.md](packages/connector-claude-agent/README.md), example: [examples/connectors/claude-agent](examples/connectors/claude-agent).
+
+### Python SDK
+
+`create_client` returns the client; `governed_tool` wraps any callable. Works with CrewAI, LangChain-Python, LlamaIndex, AutoGen, or a plain function.
+
+```python
+from makerchecker import create_client, governed_tool, GovernanceDeniedError
+
+client = create_client("http://localhost:3000", api_key="mk_...")
+session = client.proxy.open_session("crew-run")["session"]
+
+ingest = governed_tool(
+    client, session["id"], "recon-preparer", "csv-ingest@1",
+    lambda i: read_csv(i["path"]),
+)
+
+result = ingest({"path": "statement.csv"})   # raises GovernanceDeniedError if denied
+client.proxy.close_session(session["id"])
+```
+
+Install with `pip install makerchecker`. Framework recipes: [packages/sdk-python/README.md](packages/sdk-python/README.md).
+
+## Audit and verification
+
+Every state transition emits an audit event in the same database transaction as the state write. Each event hash is `SHA-256` over the RFC 8785 canonical JSON of the event (the `seq` storage column is excluded), chained through `prev_hash`. The chain is rooted in a genesis event derived from the instance UUID. Tampering with any row breaks recomputation at that row.
+
+Verification:
+
+- `GET /api/audit/verify` walks the chain and returns `{ ok, count, headHash }` or, on a break, `{ ok: false, failedSeq, reason }`.
+- The server CLI verifies the chain against the database and verifies signed bundles offline:
+
+```bash
+# against the running database
+docker compose exec server node dist/cli.js audit verify
+
+# export a signed bundle, then verify it with no database
+docker compose exec server node dist/cli.js audit export --out bundle.json
+node dist/cli.js audit verify-bundle --in bundle.json
+node dist/cli.js audit verify-bundle --in bundle.json --key instance.pub  # pin the expected key
+```
+
+Bundles are Ed25519-signed and carry the manifest needed to recompute the chain independently. The format is specified in [docs/audit-spec.md](docs/audit-spec.md) so a third party can reimplement verification in any language. The CLI also renders evidence packs: `audit report --run <id>` produces a self-contained HTML run report with chain verification, and `audit access-review` renders the role/grant/SoD review (also available as JSON at `/api/reports/access-review`).
 
 ## Status
 
-**1.0.0.** Stable public API, flow grammar, and audit-bundle format, under semantic versioning. The [audit chain spec](docs/audit-spec.md) is published for independent offline verification, the security model and hardened production deployment are documented in [SECURITY.md](SECURITY.md), and security reports are welcome.
+1.0.0. The public API, flow grammar, and audit-bundle format are stable under semantic versioning. Implemented:
 
-**Works today:**
+- Roles, agents, and versioned skills (MCP/HTTP/local) with risk tiers; deny-by-default grants with revocation.
+- SoD constraints enforced at decision time and invocation time.
+- Flows with approval gates, retries, timeouts, and a crash-recovery watchdog.
+- n-of-m named approvals: quorums, named approver lists, requester self-approval forbidden by default (fail closed).
+- Role limits and budgets: per-skill invocation caps, fail-closed amount ceilings, run-level invocation and token budgets.
+- Proxy sessions wrapping LangGraph/CrewAI/Claude Agent SDK agents with grant checks, SoD, and the audit trail, plus typed connectors and generic middleware recipes.
+- Hash-chained audit log with Ed25519-signed export bundles and a CLI verifier.
+- Evidence packs: HTML run reports and role/grant/SoD access-review reports.
+- Cron, event, and manual/API triggers; HMAC-signed outbound webhooks with retries and a failure counter.
+- Overdue-approval alerts (`approval.overdue` audit event and webhook; the approvals API reports `overdue` and `age_seconds`).
+- Prometheus `/metrics` endpoint (opt-in via `MAKERCHECKER_METRICS=1`).
+- Real-model execution (Anthropic, Gemini/OpenAI-compatible) with a deterministic air-gapped fallback.
+- API-key auth; React UI; typed SDK; OpenAPI document at `/api/openapi.json`; configurable redaction applied at write to LLM/skill audit payloads and at read to run detail and evidence packs.
 
-- roles, agents, and versioned skills (MCP/HTTP/local) with risk tiers; deny-by-default grants with revocation
-- SoD constraints enforced at both decision and invocation time
-- flows with approval gates, retries, timeouts, and a crash-recovery watchdog
-- n-of-m named approvals: quorums, named approver lists, requester self-approval forbidden by default (fail closed)
-- enforced role limits & budgets: per-skill invocation caps, fail-closed amount ceilings, run-level invocation and token budgets
-- proxy sessions wrapping LangGraph/CrewAI/Claude Agent SDK agents with grant checks, SoD, and the audit trail, no migration into the flow engine; typed connectors for [LangChain](packages/connector-langchain) ([demo](examples/connectors/langchain/README.md)) and the [Claude Agent SDK](packages/connector-claude-agent), a [Python SDK](packages/sdk-python) for CrewAI/LangChain-Python/etc., plus generic [middleware recipes](examples/middleware/README.md)
-- hash-chained audit log with Ed25519-signed export bundles and a CLI verifier
-- evidence packs: `makerchecker audit report --run <id>` renders a self-contained HTML run report with chain verification; `makerchecker audit access-review` renders the role/grant/SoD review (also JSON at `/api/reports/access-review`)
-- cron triggers scheduled at boot (runs start as `system/cron` from the latest published version)
-- HMAC-signed outbound webhooks with retries and a failure counter
-- overdue-approval alerts (`approval.overdue` audit event + webhook, fired once per approval by the watchdog; the approvals API reports `overdue` and `age_seconds`)
-- Prometheus `/metrics` endpoint (opt-in via `MAKERCHECKER_METRICS=1`)
-- real-model execution (Anthropic, Gemini/OpenAI-compatible) with a deterministic air-gapped fallback
-- API-key auth; React UI (run viewer, approvals inbox, registry); typed SDK; OpenAPI document at `/api/openapi.json`; configurable redaction applied at write to llm/skill audit payloads and at read to run detail and evidence packs
+Security model and hardened deployment: [SECURITY.md](SECURITY.md). Security reports are welcome.
+
+## Comparison
+
+|  | MakerChecker | Cordum | Galileo Agent Control | Observability tools |
+|---|---|---|---|---|
+| Deny-by-default grant ledger | Versioned grants per role; full permission history reconstructable | Allow-unless-policy-hits; agent identity is enterprise-paywalled | None; content rules, not permissions | None |
+| Runtime SoD enforcement | Declared role-pair constraints, enforced at execution | Multi-approver routing only | None | None |
+| Signed offline-verifiable export | Core feature, [open spec](docs/audit-spec.md) | Hash chain claimed; no published spec, no signed export | None | Logs and traces, not evidence |
+| License | AGPL-3.0 core, Apache-2.0 SDK and examples | BUSL-1.1 | Apache 2.0 (Cisco-owned) | Varies |
+
+Guardrail products answer whether content is dangerous. MakerChecker answers whether the actor is authorized and who approved the action. An agent that passes every content check can still execute a payment it was never authorized to touch. The two compose: run guardrails on content, run MakerChecker on authority. Full landscape: [docs/positioning/competitive-landscape.md](docs/positioning/competitive-landscape.md).
 
 ## License
 
-- `packages/server`, `packages/web`, `packages/shared`: **AGPL-3.0** ([LICENSE](LICENSE))
-- `packages/sdk`, `packages/sdk-python`, `packages/connector-langchain`, `packages/connector-claude-agent`, and `examples/`: **Apache-2.0** ([packages/sdk/LICENSE](packages/sdk/LICENSE), [packages/sdk-python/LICENSE](packages/sdk-python/LICENSE), [packages/connector-langchain/LICENSE](packages/connector-langchain/LICENSE), [packages/connector-claude-agent/LICENSE](packages/connector-claude-agent/LICENSE), [examples/LICENSE](examples/LICENSE)), code you embed in your own systems never carries AGPL obligations
-- A **commercial license** (no copyleft obligation) is available for organizations whose policies preclude AGPL-3.0: hello@makerchecker.ai
+Split license. The control plane is AGPL-3.0; the integration layer is Apache-2.0.
 
-Licensing rationale and the commercial/CLA model: [LICENSING.md](LICENSING.md). The audit chain is specified for independent offline verification ([audit spec](docs/audit-spec.md)); security reports are welcome ([SECURITY.md](SECURITY.md)).
+- `packages/server`, `packages/web`, `packages/shared`: AGPL-3.0 ([LICENSE](LICENSE)).
+- `packages/sdk`, `packages/sdk-python`, `packages/connector-langchain`, `packages/connector-claude-agent`, and `examples/`: Apache-2.0. Code you embed in your own systems never carries AGPL obligations. The boundary is the network API.
+- A commercial license (no copyleft obligation) is available for organizations whose policies preclude AGPL-3.0: hello@makerchecker.ai.
+
+Rationale and the commercial/CLA model: [LICENSING.md](LICENSING.md). Per-package `license` fields are authoritative.
 
 Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) · Changelog: [CHANGELOG.md](CHANGELOG.md) · Starter issues: [docs/good-first-issues.md](docs/good-first-issues.md)
