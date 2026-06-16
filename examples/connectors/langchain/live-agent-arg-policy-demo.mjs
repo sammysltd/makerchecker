@@ -14,7 +14,6 @@
 // @langchain/google-genai installed in this package.
 import { tool } from "@langchain/core/tools";
 import { HumanMessage } from "@langchain/core/messages";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { z } from "zod";
 
 import { createClient } from "../../../packages/sdk/dist/index.js";
@@ -23,22 +22,39 @@ import {
   GovernanceDeniedError,
 } from "../../../packages/connector-langchain/dist/index.js";
 
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.error("GEMINI_API_KEY is required for the live agent demo");
-  process.exit(2);
-}
-
 const client = createClient({
   baseUrl: process.env.MAKERCHECKER_URL ?? "http://localhost:3000",
   ...(process.env.MAKERCHECKER_API_KEY ? { apiKey: process.env.MAKERCHECKER_API_KEY } : {}),
 });
 
-const model = new ChatGoogleGenerativeAI({
-  apiKey,
-  model: process.env.LIVE_AGENT_MODEL ?? "gemini-2.5-flash",
-  temperature: 0,
-});
+// Pick the live model by provider, so the SAME governed agent runs on Gemini,
+// Claude, or GPT. Each provider client reads its own key from the environment.
+const provider = process.env.LIVE_AGENT_PROVIDER ?? "gemini";
+async function makeModel() {
+  if (provider === "anthropic") {
+    if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY required");
+    const { ChatAnthropic } = await import("@langchain/anthropic");
+    return new ChatAnthropic({
+      model: process.env.LIVE_AGENT_MODEL ?? "claude-3-5-haiku-latest",
+      temperature: 0,
+    });
+  }
+  if (provider === "openai") {
+    if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY required");
+    const { ChatOpenAI } = await import("@langchain/openai");
+    // No temperature: the gpt-5 family rejects non-default temperature.
+    return new ChatOpenAI({ model: process.env.LIVE_AGENT_MODEL ?? "gpt-5-nano" });
+  }
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY required");
+  const { ChatGoogleGenerativeAI } = await import("@langchain/google-genai");
+  return new ChatGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    model: process.env.LIVE_AGENT_MODEL ?? "gemini-2.5-flash",
+    temperature: 0,
+  });
+}
+const model = await makeModel();
+console.log(`live model provider: ${provider}`);
 
 // The developer's real tool. The body is a stand-in for a payments call;
 // MakerChecker never runs it unless the check passes.
@@ -88,10 +104,11 @@ async function runAgent(prompt) {
   }
 }
 
-// 1. Off-allowlist destination -> the agent chooses it, MakerChecker blocks it.
-await runAgent("Send 100 tokens to the address 0xATTACKER.");
+// 1. Off-allowlist destination (a neutral address so the model's own safety
+//    does not preempt the call) -> the agent chooses it, MakerChecker blocks it.
+await runAgent("Send 100 tokens to the wallet address 0x9f3b2c1d.");
 // 2. On-allowlist destination -> allowed.
-await runAgent("Send 100 tokens to the address 0xSAFE.");
+await runAgent("Send 100 tokens to the wallet address 0xSAFE.");
 
 await client.proxy.closeSession(session.id);
 const verdict = await client.audit.verify();
