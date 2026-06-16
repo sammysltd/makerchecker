@@ -50,3 +50,8 @@
 - `middleware/`: wrap, don't migrate for any framework: govern agents that live
   in LangGraph, CrewAI, or the Claude Agent SDK with the SDK's `governedTool` and
   proxy sessions: grant checks, SoD, and the audit chain without re-platforming.
+- `rogue-ai/`: twenty real-world incidents where an AI or automated system took a
+  consequential action it should not have (Replit deleting a production database,
+  Knight Capital, EchoLeak, the Air Canada chatbot, nH Predict, and more), each
+  configured as a MakerChecker scenario that denies, gates, or records the action.
+  Every entry is honest about what it does not prevent and links its full analysis.
