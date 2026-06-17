@@ -86,3 +86,5 @@ ALTER TABLE audit_events DISABLE TRIGGER audit_events_no_update_delete; -- Must 
 ## Auditing the audit chain
 
 The audit chain's verification is fully specified in the [audit spec](audit-spec.md) and reproducible offline, in any language, with no access to our systems. Findings against the chain, the canonicalization, or the signed export bundles are in scope in [SECURITY.md](../SECURITY.md).
+
+The controls above and the evidence they produce are crosswalked to SOC 2, ISO/IEC 27001:2022 Annex A, and ISO/IEC 42001 clauses in [compliance/control-mapping.md](compliance/control-mapping.md).
