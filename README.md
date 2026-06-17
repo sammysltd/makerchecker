@@ -66,6 +66,8 @@ curl localhost:3000/api/audit/verify -H "$H"
 
 Full local setup, and running with real models, is in [docs/quickstart.md](docs/quickstart.md).
 
+For Kubernetes, a Helm chart — non-root pod, the signing key on a persistent volume, and the two-role hardening applied as a pre-install hook — is in [deploy/helm](deploy/helm/README.md).
+
 The quickstart connects as the Postgres owner, which disables the append-only audit triggers. For tamper-resistance against a compromised app credential, run the server as a non-owner role with [`docker-compose.hardened.yml`](docker-compose.hardened.yml) ([walkthrough](docs/security-model.md#database-hardening-walkthrough)).
 
 ## Packages

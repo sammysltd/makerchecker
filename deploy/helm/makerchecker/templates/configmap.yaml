@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "makerchecker.configMapName" . }}
+  labels:
+    {{- include "makerchecker.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.config.port | quote }}
+  MAKERCHECKER_DATA_DIR: {{ .Values.config.dataDir | quote }}
+  MAKERCHECKER_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  HOME: /tmp
+  {{- if .Values.config.redaction }}
+  MAKERCHECKER_REDACTION: {{ .Values.config.redaction | quote }}
+  {{- end }}
+  {{- if .Values.config.requireIdentityGates }}
+  MAKERCHECKER_REQUIRE_IDENTITY_GATES: "1"
+  {{- end }}
+  {{- if .Values.config.seedDemo }}
+  MAKERCHECKER_SEED_DEMO: "1"
+  {{- end }}
+  {{- if .Values.config.metrics }}
+  MAKERCHECKER_METRICS: "1"
+  {{- end }}
+  {{- if .Values.config.allowedOrigins }}
+  ALLOWED_ORIGINS: {{ .Values.config.allowedOrigins | quote }}
+  {{- end }}
+  {{- if .Values.config.executor }}
+  MAKERCHECKER_EXECUTOR: {{ .Values.config.executor | quote }}
+  {{- end }}
+  {{- if .Values.config.model }}
+  MAKERCHECKER_MODEL: {{ .Values.config.model | quote }}
+  {{- end }}
+  {{- if .Values.config.stdioAllowedCommands }}
+  MAKERCHECKER_STDIO_ALLOWED_COMMANDS: {{ .Values.config.stdioAllowedCommands | quote }}
+  {{- end }}
+  {{- if .Values.config.demoDataDir }}
+  DEMO_DATA_DIR: {{ .Values.config.demoDataDir | quote }}
+  {{- end }}
+  {{- range $k, $v := .Values.config.extraEnv }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

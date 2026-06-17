@@ -1,0 +1,31 @@
+# Recommended production shape: external managed Postgres, two-role hardening.
+# The referenced Secret must hold the runtime and owner DATABASE_URLs and
+# MC_RUNTIME_PASSWORD. Create it out of band, for example:
+#
+#   kubectl create secret generic makerchecker-db \
+#     --from-literal=DATABASE_URL='postgres://mc_app_runtime:<pw>@db:5432/makerchecker' \
+#     --from-literal=DATABASE_URL_OWNER='postgres://makerchecker:<owner-pw>@db:5432/makerchecker' \
+#     --from-literal=MC_RUNTIME_PASSWORD='<pw>'
+hardened:
+  enabled: true
+
+database:
+  existingSecret: makerchecker-db
+  runtimeUrlKey: DATABASE_URL
+  ownerUrlKey: DATABASE_URL_OWNER
+
+postgresql:
+  enabled: false
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: makerchecker.example.com
+      paths:
+        - path: /
+          pathType: Prefix

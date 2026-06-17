@@ -127,6 +127,29 @@ jobs:
           severity: HIGH,CRITICAL
           vuln-type: os,library
 
+  # Helm chart verification (self-verifying, no cluster needed): helm lint catches
+  # a malformed chart; helm template forces a full render so a bad template or a
+  # broken values reference fails here, on the PR's own CI. Each example value set
+  # exercises a different path (external DB, bundled Postgres, single-role), so a
+  # regression in any toggle surfaces without a kind cluster.
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.1
+      - name: helm lint
+        run: |
+          for f in external-db bundled-eval single-role; do
+            helm lint --strict deploy/helm/makerchecker -f deploy/helm/examples/values-$f.yaml
+          done
+      - name: helm template (render must succeed)
+        run: |
+          for f in external-db bundled-eval single-role; do
+            helm template makerchecker deploy/helm/makerchecker -f deploy/helm/examples/values-$f.yaml > /dev/null
+          done
+
   # SBOM (evidence, non-gating): emit a machine-readable CycloneDX bill of
   # materials a self-hosting regulated buyer can ingest. This generates and
   # uploads evidence — it must never fail the PR, so there is no exit-code here

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: makerchecker
+description: Governance and audit control plane for AI agents (Fastify server on Postgres).
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.25.0-0"
+home: https://makerchecker.ai
+sources:
+  - https://github.com/sammysltd/makerchecker
+keywords:
+  - audit
+  - governance
+  - postgres
+  - agents
+maintainers:
+  - name: MakerChecker
+    email: hello@makerchecker.ai

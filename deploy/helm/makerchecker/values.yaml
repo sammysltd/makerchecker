@@ -1,0 +1,150 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/sammysltd/makerchecker-server
+  # Defaults to .Chart.appVersion when empty.
+  tag: ""
+  # A sha256 digest pins the image; when set it overrides tag.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Two-role DB hardening. When enabled, a pre-install/pre-upgrade Job runs
+# migrations then ops/harden-db.sql as the owner, and the Deployment connects as
+# the non-owner mc_app_runtime role with MAKERCHECKER_SKIP_MIGRATE=1. When
+# disabled (single-role eval), the server connects as the owner and runs
+# migrations at boot.
+hardened:
+  enabled: true
+  # Image carrying psql for the harden step. The server image ships no psql.
+  postgresImage: postgres:17-alpine
+
+# DATABASE_URL source. With existingSecret set, the chart never templates a
+# connection string; it reads it from the named Secret.
+database:
+  # Reference an operator-managed Secret instead of letting the chart create one.
+  existingSecret: ""
+  # Key in existingSecret holding the runtime (server) DATABASE_URL.
+  runtimeUrlKey: DATABASE_URL
+  # Key in existingSecret holding the owner DATABASE_URL (hardened mode only).
+  ownerUrlKey: DATABASE_URL_OWNER
+  # Used only when existingSecret is empty and the chart creates the Secret.
+  # The runtime URL is required in single-role mode; in hardened mode the chart
+  # builds the runtime URL from the owner host and runtimePassword.
+  runtimeUrl: ""
+  ownerUrl: ""
+  # Password for the mc_app_runtime role (hardened mode). Set once; harden-db.sql
+  # does not reset it on re-runs.
+  runtimePassword: ""
+
+# Provider API keys (optional). Left out of the Secret when blank.
+secrets:
+  anthropicApiKey: ""
+  geminiApiKey: ""
+
+# Non-secret server configuration (rendered into a ConfigMap).
+config:
+  port: 3000
+  dataDir: /data
+  logLevel: info
+  # Redaction hook: example, standard, or "" (no redaction).
+  redaction: standard
+  # Demo seeding provisions an admin and prints its key; keep off in a cluster.
+  seedDemo: false
+  requireIdentityGates: false
+  metrics: false
+  allowedOrigins: ""
+  executor: ""
+  model: ""
+  stdioAllowedCommands: ""
+  demoDataDir: ""
+  # Extra plain env entries (name -> value).
+  extraEnv: {}
+
+# PersistentVolumeClaim for the instance Ed25519 signing key at dataDir. It MUST
+# survive pod restarts: the public key is published to the database write-once,
+# so a lost private key permanently breaks signed-bundle verification. Never
+# back this with emptyDir.
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: makerchecker.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+probes:
+  liveness:
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 5
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Bundled Postgres. EVAL ONLY: single replica, no HA, no backups, single-role
+# owner connection. Production sets postgresql.enabled=false and supplies an
+# external managed Postgres via database.existingSecret.
+postgresql:
+  enabled: false
+  image: postgres:17-alpine
+  auth:
+    username: makerchecker
+    password: makerchecker
+    database: makerchecker
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    storageClassName: ""
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
