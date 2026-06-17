@@ -49,6 +49,15 @@ services:
       - mcdata:/data
     ports:
       - "3000:3000"
+    # Least-privilege runtime: the server needs no Linux capabilities and must
+    # never gain privileges, so a code-exec bug cannot escalate. read_only is
+    # left off because the stdio MCP-skill path spawns npx/uvx, which writes
+    # caches under /tmp and ~/.npm outside the /data volume; enabling it needs a
+    # paired /tmp tmpfs and a writable HOME, exercised separately.
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
     depends_on:
       postgres:
         condition: service_healthy
