@@ -71,6 +71,16 @@ async function grant(agentName: string, ref: string): Promise<void> {
   );
 }
 
+/** Creates (or reuses) a user and returns its id — needed to decide identity-mode gates. */
+async function seedUser(email: string): Promise<string> {
+  const { rows } = await db.pool.query<{ id: string }>(
+    `INSERT INTO users (email, password_hash, display_name) VALUES ($1, 'x', $1)
+     ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id`,
+    [email],
+  );
+  return rows[0]!.id;
+}
+
 async function waitForRunStatus(
   runId: string,
   statuses: string[],
@@ -697,19 +707,25 @@ describe("M3 — high-risk skills require gates", () => {
     ).rejects.toThrow(/high-risk.*approval gate/);
   });
 
-  it("publishes and runs a gated high-risk flow end to end", async () => {
+  it("publishes and runs a gated high-risk flow end to end (separation-enforcing gate)", async () => {
     await seedAgent("payments-agent");
     await seedSkill("post-payment@1", async (i) => ({ ...i, posted: true }), "high");
     await seedSkill("draft-payment@1", async (i) => ({ ...i, drafted: true }));
     await grant("payments-agent", "post-payment@1");
     await grant("payments-agent", "draft-payment@1");
+    const checkerId = await seedUser("checker@bank.example");
 
     const { flowVersionId } = await publishFlowVersion(db.pool, {
       definition: {
         name: "gated-payment-flow",
         steps: [
           { key: "draft", agent: "payments-agent", skills: ["draft-payment@1"] },
-          { key: "review", type: "approval_gate", title: "Approve payment batch" },
+          {
+            key: "review",
+            type: "approval_gate",
+            title: "Approve payment batch",
+            approvals: { min_approvals: 1, forbid_requester: true },
+          },
           { key: "post", agent: "payments-agent", skills: ["post-payment@1"] },
         ],
       },
@@ -721,10 +737,12 @@ describe("M3 — high-risk skills require gates", () => {
       "SELECT id FROM approvals WHERE run_id = $1 AND status = 'pending'",
       [runId],
     );
+    // A different identity than the run's requester (USER) must clear it.
     await decideApproval(ctx, {
       approvalId: approval.rows[0]!.id,
       decision: "approved",
-      decidedBy: USER,
+      decidedBy: { type: "user", id: checkerId, name: "checker@bank.example" },
+      userId: checkerId,
     });
     expect(await waitForRunStatus(runId, ["completed", "failed"])).toBe("completed");
   });
@@ -738,10 +756,101 @@ describe("M3 — high-risk skills require gates", () => {
           agentName: "payments-agent",
           skillRefs: ["post-payment@1"],
           runId: "00000000-0000-0000-0000-000000000000",
-          hasPrecedingGate: false,
+          hasSeparationGate: false,
         }),
       ),
     ).rejects.toThrow(/high-risk/);
+  });
+
+  it("rejects publishing a high-risk skill guarded only by a LEGACY (self-approvable) gate", async () => {
+    await seedAgent("payments-agent");
+    await seedSkill("post-payment@1", async (i) => i, "high");
+    await grant("payments-agent", "post-payment@1");
+    await expect(
+      publishFlowVersion(db.pool, {
+        definition: {
+          name: "legacy-gated-high-risk",
+          steps: [
+            { key: "review", type: "approval_gate", title: "Rubber stamp" },
+            { key: "pay", agent: "payments-agent", skills: ["post-payment@1"] },
+          ],
+        },
+        actor: USER,
+      }),
+    ).rejects.toThrow(/enforces approver separation/);
+  });
+
+  it("publishes a high-risk skill behind an identity-mode (forbid_requester) gate", async () => {
+    await seedAgent("payments-agent");
+    await seedSkill("post-payment@1", async (i) => i, "high");
+    await grant("payments-agent", "post-payment@1");
+    const published = await publishFlowVersion(db.pool, {
+      definition: {
+        name: "identity-gated-high-risk",
+        steps: [
+          {
+            key: "review",
+            type: "approval_gate",
+            title: "Four-eyes",
+            approvals: { min_approvals: 1, forbid_requester: true },
+          },
+          { key: "pay", agent: "payments-agent", skills: ["post-payment@1"] },
+        ],
+      },
+      actor: USER,
+    });
+    expect(published.version).toBeGreaterThan(0);
+  });
+
+  // Adversarial: a flow version that predates this rule is immutable, so it can
+  // still reach the engine. Even when its legacy gate is approved by the run's
+  // OWN requester, the high-risk step must fail closed at run time.
+  it("denies a high-risk step behind a legacy gate at RUN TIME, even self-approved", async () => {
+    await seedAgent("legacy-payments-agent");
+    await seedSkill("legacy-draft@1", async (i) => ({ ...i, drafted: true }));
+    await seedSkill("legacy-post@1", async (i) => ({ ...i, posted: true }), "high");
+    await grant("legacy-payments-agent", "legacy-draft@1");
+    await grant("legacy-payments-agent", "legacy-post@1");
+
+    // Insert the version directly, bypassing publish-time validation.
+    const def = {
+      name: "predates-separation-rule",
+      steps: [
+        { key: "draft", agent: "legacy-payments-agent", skills: ["legacy-draft@1"] },
+        { key: "review", type: "approval_gate", title: "Legacy gate" },
+        { key: "pay", agent: "legacy-payments-agent", skills: ["legacy-post@1"] },
+      ],
+    };
+    const flow = await db.pool.query<{ id: string }>(
+      `INSERT INTO flows (name) VALUES ($1)
+       ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+      [def.name],
+    );
+    const fv = await db.pool.query<{ id: string }>(
+      `INSERT INTO flow_versions (flow_id, version, definition, status)
+       VALUES ($1, 1, $2, 'published') RETURNING id`,
+      [flow.rows[0]!.id, JSON.stringify(def)],
+    );
+
+    const runId = await startRun(ctx, { flowVersionId: fv.rows[0]!.id, triggeredBy: USER });
+    await waitForRunStatus(runId, ["waiting_approval"]);
+    const approval = await db.pool.query<{ id: string }>(
+      "SELECT id FROM approvals WHERE run_id = $1 AND status = 'pending'",
+      [runId],
+    );
+    // The requester clears the legacy gate (legacy gates apply no identity rule)…
+    await decideApproval(ctx, {
+      approvalId: approval.rows[0]!.id,
+      decision: "approved",
+      decidedBy: USER,
+    });
+    // …yet the high-risk step is still refused at run time.
+    expect(await waitForRunStatus(runId, ["failed"])).toBe("failed");
+    const { rows } = await db.pool.query<{ payload: { code: string } }>(
+      "SELECT payload FROM audit_events WHERE run_id = $1 AND event_type = 'enforcement.blocked'",
+      [runId],
+    );
+    expect(rows[0]!.payload).toMatchObject({ code: "high_risk_requires_gate" });
   });
 });
 

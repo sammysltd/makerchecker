@@ -4,6 +4,7 @@ export {
   ApprovalGateApprovals,
   ApprovalGateStep,
   FlowDefinitionSchema,
+  gateEnforcesSeparation,
   isApprovalGate,
   SKILL_REF_PATTERN,
   SkillRef,

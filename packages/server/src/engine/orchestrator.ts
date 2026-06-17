@@ -1,4 +1,5 @@
 import {
+  gateEnforcesSeparation,
   isApprovalGate,
   type AgentStepDef,
   type ApprovalGateApprovalsDef,
@@ -210,7 +211,7 @@ export async function advanceRun(ctx: EngineContext, runId: string): Promise<voi
         agentName: step.agent,
         skillRefs: step.skills,
         runId,
-        hasPrecedingGate: definition.steps.slice(0, nextIndex).some(isApprovalGate),
+        hasSeparationGate: definition.steps.slice(0, nextIndex).some(gateEnforcesSeparation),
       });
     } catch (err) {
       if (err instanceof EnforcementError) {
@@ -300,11 +301,11 @@ export async function advanceRun(ctx: EngineContext, runId: string): Promise<voi
 export async function executeStep(ctx: EngineContext, stepRunId: string): Promise<void> {
   const loaded = await loadStepForExecution(ctx.pool, stepRunId);
   if (!loaded) return; // already handled (idempotency)
-  const { stepRun, step, runId, hasPrecedingGate, meta } = loaded;
+  const { stepRun, step, runId, hasSeparationGate, meta } = loaded;
 
   // Defensive re-enforcement at invocation time: grants or constraints may
   // have changed between scheduling and execution. Deny by default, twice.
-  const blocked = await reEnforce(ctx, { step, runId, stepRunId, hasPrecedingGate });
+  const blocked = await reEnforce(ctx, { step, runId, stepRunId, hasSeparationGate });
   if (blocked) return;
 
   const timeoutMs = step.timeout_ms ?? DEFAULT_STEP_TIMEOUT_MS;
@@ -797,7 +798,7 @@ async function resolveStepInput(client: PoolClient, run: RunRow, stepIndex: numb
 /** Re-runs enforcement at invocation time; returns true if the run was blocked. */
 async function reEnforce(
   ctx: EngineContext,
-  args: { step: AgentStepDef; runId: string; stepRunId: string; hasPrecedingGate: boolean },
+  args: { step: AgentStepDef; runId: string; stepRunId: string; hasSeparationGate: boolean },
 ): Promise<boolean> {
   const client = await ctx.pool.connect();
   try {
@@ -808,7 +809,7 @@ async function reEnforce(
         agentName: args.step.agent,
         skillRefs: args.step.skills,
         runId: args.runId,
-        hasPrecedingGate: args.hasPrecedingGate,
+        hasSeparationGate: args.hasSeparationGate,
       });
       await client.query("COMMIT");
       return false;
@@ -849,7 +850,7 @@ async function loadStepForExecution(
   stepRun: StepRunRow & { agent_id: string };
   step: AgentStepDef;
   runId: string;
-  hasPrecedingGate: boolean;
+  hasSeparationGate: boolean;
   meta: StepExecutionMeta;
 } | null> {
   const { rows } = await pool.query<
@@ -886,7 +887,7 @@ async function loadStepForExecution(
     stepRun,
     step,
     runId: stepRun.run_id,
-    hasPrecedingGate: definition.steps.slice(0, stepRun.step_index).some(isApprovalGate),
+    hasSeparationGate: definition.steps.slice(0, stepRun.step_index).some(gateEnforcesSeparation),
     meta: {
       runId: stepRun.run_id,
       stepRunId: stepRun.id,

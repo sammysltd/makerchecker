@@ -98,6 +98,25 @@ export function isApprovalGate(step: FlowStep): step is ApprovalGateStepDef {
   return "type" in step && step.type === "approval_gate";
 }
 
+/**
+ * A gate "enforces separation" when it can keep the run's own requester from
+ * approving their own work: it is identity-mode (defines an `approvals` object,
+ * which forces decisions to come from an authenticated user) AND does not
+ * explicitly disable `forbid_requester` (which defaults ON in identity mode).
+ *
+ * A legacy gate (no `approvals` object) applies no identity rule and so cannot
+ * satisfy segregation of duties. Any gate type proves "a human paused here";
+ * only a separation-enforcing gate proves "the approver is not the requester" —
+ * which is what a HIGH-RISK step must be guarded by.
+ */
+export function gateEnforcesSeparation(step: FlowStep): boolean {
+  return (
+    isApprovalGate(step) &&
+    step.approvals !== undefined &&
+    step.approvals.forbid_requester !== false
+  );
+}
+
 export type FlowValidationResult =
   | { ok: true; definition: FlowDefinition }
   | { ok: false; errors: string[] };
