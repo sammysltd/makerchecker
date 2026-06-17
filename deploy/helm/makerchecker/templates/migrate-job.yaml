@@ -1,0 +1,134 @@
+{{- if .Values.hardened.enabled }}
+{{- $secretName := include "makerchecker.secretName" . }}
+{{- $ownerKey := include "makerchecker.ownerUrlKey" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "makerchecker.fullname" . }}-harden-sql
+  labels:
+    {{- include "makerchecker.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+data:
+  harden-db.sql: |-
+{{ .Files.Get "files/harden-db.sql" | indent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "makerchecker.fullname" . }}-migrate-harden
+  labels:
+    {{- include "makerchecker.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "makerchecker.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "makerchecker.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Ordered: migrate (owner) runs as an initContainer and must exit 0 before
+      # the harden container runs. Both carry the OWNER credential; the long-
+      # running Deployment uses the non-owner runtime credential instead.
+      initContainers:
+        - name: migrate
+          image: {{ include "makerchecker.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/cli.js", "migrate"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: HOME
+              value: /tmp
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ $ownerKey }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: harden
+          image: {{ .Values.hardened.postgresImage | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              psql "$DATABASE_URL_OWNER" \
+                -v ON_ERROR_STOP=1 \
+                -v mc_runtime_password="$MC_RUNTIME_PASSWORD" \
+                -f /ops/harden-db.sql
+          env:
+            - name: HOME
+              value: /tmp
+            - name: DATABASE_URL_OWNER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ $ownerKey }}
+            - name: MC_RUNTIME_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: MC_RUNTIME_PASSWORD
+          volumeMounts:
+            - name: ops
+              mountPath: /ops
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: ops
+          configMap:
+            name: {{ include "makerchecker.fullname" . }}-harden-sql
+        - name: tmp
+          emptyDir:
+            medium: Memory
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

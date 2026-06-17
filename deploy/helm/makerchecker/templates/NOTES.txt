@@ -1,0 +1,52 @@
+MakerChecker is installed as release {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+Server image: {{ include "makerchecker.image" . }}
+
+Reach the API and web UI:
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "makerchecker.fullname" . }} 3000:{{ .Values.service.port }}
+  # then open http://localhost:3000/healthz
+
+{{- if .Values.ingress.enabled }}
+
+Ingress is enabled at:
+{{- range .Values.ingress.hosts }}
+  http://{{ .host }}
+{{- end }}
+{{- end }}
+
+Deployment mode:
+{{- if .Values.hardened.enabled }}
+  Hardened two-role. A pre-install/pre-upgrade Job ran migrations then
+  ops/harden-db.sql as the database owner; the server connects as the non-owner
+  mc_app_runtime role with MAKERCHECKER_SKIP_MIGRATE=1 and cannot mutate or
+  truncate audit_events / instance.
+{{- else }}
+  Single-role (eval). The server connects as the database owner and runs
+  migrations at boot. The owner can disable the append-only audit triggers, so
+  set hardened.enabled=true for tamper-resistance against a compromised app
+  credential.
+{{- end }}
+
+{{- if .Values.postgresql.enabled }}
+
+WARNING: postgresql.enabled=true ships a single-replica eval Postgres with no HA
+and no backups. For any real deployment set postgresql.enabled=false and supply
+an external managed Postgres through database.existingSecret.
+{{- end }}
+
+{{- if .Values.config.seedDemo }}
+
+WARNING: config.seedDemo=true provisions a demo admin and prints an admin API
+key in the logs. Never leave this on for a real deployment.
+{{- end }}
+
+Mint the first admin (nothing is seeded by default):
+
+  kubectl --namespace {{ .Release.Namespace }} exec deploy/{{ include "makerchecker.fullname" . }} -- \
+    node dist/cli.js bootstrap-admin --email admin@your-org.example --name 'Platform Admin'
+
+Verify the audit chain:
+
+  kubectl --namespace {{ .Release.Namespace }} exec deploy/{{ include "makerchecker.fullname" . }} -- \
+    node dist/cli.js audit verify

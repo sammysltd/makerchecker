@@ -1,0 +1,27 @@
+# EVAL ONLY: bundled single-replica Postgres with two-role hardening. No HA, no
+# backups. Use this to try the chart on a throwaway cluster, never in production.
+hardened:
+  enabled: true
+
+postgresql:
+  enabled: true
+  auth:
+    username: makerchecker
+    password: makerchecker
+    database: makerchecker
+
+database:
+  # Password embedded in the mc_app_runtime DATABASE_URL the chart builds.
+  runtimePassword: change-me-eval
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: makerchecker.local
+      paths:
+        - path: /
+          pathType: Prefix

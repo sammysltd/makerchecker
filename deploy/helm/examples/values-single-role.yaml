@@ -1,0 +1,20 @@
+# Single-role eval: the server connects as the database owner and runs migrations
+# at boot. Simplest path, but the owner can disable the append-only audit
+# triggers, so a compromised app credential could rewrite history. Set
+# hardened.enabled=true for tamper-resistance.
+hardened:
+  enabled: false
+
+postgresql:
+  enabled: true
+  auth:
+    username: makerchecker
+    password: makerchecker
+    database: makerchecker
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+ingress:
+  enabled: false
