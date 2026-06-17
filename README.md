@@ -4,6 +4,8 @@
 [![Release](https://img.shields.io/github/v/release/sammysltd/makerchecker?label=release)](https://github.com/sammysltd/makerchecker/releases/latest)
 [![License](https://img.shields.io/badge/license-AGPL--3.0%20core%20%2B%20Apache--2.0%20SDK-informational)](LICENSING.md)
 
+**Website: [makerchecker.ai](https://makerchecker.ai)**
+
 MakerChecker is self-hosted software that governs AI agents. An agent acts only through a **role**, runs only the skills its role was **granted** (deny by default, pinned to an exact version), and cannot approve its own work. Every action commits to a hash-chained, Ed25519-signed **audit log** that anyone verifies offline — change one row and verification breaks at it.
 
 Your agents keep running in their existing framework. MakerChecker is the checkpoint in front of them and the record behind them: a Fastify server on Postgres. Agents connect as a **flow** (MakerChecker runs the steps and gates) or a **proxy session** (MakerChecker authorizes and records tool calls your framework executes). Both write the same audit chain.
