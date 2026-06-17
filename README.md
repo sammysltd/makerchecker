@@ -12,7 +12,7 @@ MakerChecker is self-hosted software that governs AI agents through **structural
 
 Your agents keep running in their existing framework. MakerChecker is the checkpoint in front of them and the record behind them: a Fastify server on Postgres. Agents connect as a **flow** (MakerChecker runs the steps and gates) or a **proxy session** (MakerChecker authorizes and records tool calls your framework executes). Both write the same audit chain.
 
-**New here?** Operator → [Quickstart](#quickstart). Integrator → [Integration](#integration). Security reviewer → [docs/security-model.md](docs/security-model.md). Examiner → [docs/audit-spec.md](docs/audit-spec.md).
+**New here?** Operator → [Quickstart](#quickstart). Integrator → [Integration](#integration). Security reviewer → [docs/security-model.md](docs/security-model.md). Examiner → [docs/audit-spec.md](docs/audit-spec.md). GRC analyst → [docs/compliance/control-mapping.md](docs/compliance/control-mapping.md).
 
 [Live demo](https://makerchecker.ai/demo/): an agent is blocked from exceeding its grant and from approving its own work, the run's audit chain verifies offline, and a named human signs off only where a rule requires it. No signup.
 
