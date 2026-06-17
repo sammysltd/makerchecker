@@ -6,13 +6,15 @@
 
 **Website: [makerchecker.ai](https://makerchecker.ai)**
 
-MakerChecker is self-hosted software that governs AI agents. An agent acts only through a **role**, runs only the skills its role was **granted** (deny by default, pinned to an exact version), and cannot approve its own work. Every action commits to a hash-chained, Ed25519-signed **audit log** that anyone verifies offline — change one row and verification breaks at it.
+**Your AI agent moved the money. No one approved it.**
+
+MakerChecker is self-hosted software that governs AI agents through **structural enforcement** and **human approvals**. Structural enforcement runs at machine speed with no human in the path: an agent acts only through a **role**, runs only the skills its role was **granted** (deny by default, pinned to an exact version), cannot exceed its limits, and provably cannot approve its own work. Human approval is reserved for the few high-risk actions where a rule requires a named person to sign. Every action commits to a hash-chained, Ed25519-signed **audit log** that anyone verifies offline. Change one row and verification breaks at it.
 
 Your agents keep running in their existing framework. MakerChecker is the checkpoint in front of them and the record behind them: a Fastify server on Postgres. Agents connect as a **flow** (MakerChecker runs the steps and gates) or a **proxy session** (MakerChecker authorizes and records tool calls your framework executes). Both write the same audit chain.
 
 **New here?** Operator → [Quickstart](#quickstart). Integrator → [Integration](#integration). Security reviewer → [docs/security-model.md](docs/security-model.md). Examiner → [docs/audit-spec.md](docs/audit-spec.md).
 
-[Live demo](https://makerchecker.ai/demo/): an agent is blocked from approving its own work, a human signs off, and the run's audit chain comes back verified. No signup.
+[Live demo](https://makerchecker.ai/demo/): an agent is blocked from exceeding its grant and from approving its own work, the run's audit chain verifies offline, and a named human signs off only where a rule requires it. No signup.
 
 ![Run viewer](docs/assets/demo.gif)
 
