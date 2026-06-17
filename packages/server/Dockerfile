@@ -15,6 +15,9 @@ RUN pnpm --filter @makerchecker/server... run build && \
 
 FROM node:22-alpine
 WORKDIR /app
+# Drop the bundled npm/npx CLI: the runtime runs node directly (pnpm/corepack are
+# build-time only), so npm is unused weight whose vendored deps trip the image scan.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 ENV NODE_ENV=production
 ENV DEMO_DATA_DIR=/app/examples/daily-cash-reconciliation
 ENV MAKERCHECKER_WEB_DIST=/app/web-dist

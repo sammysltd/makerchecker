@@ -98,6 +98,74 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  # Image CVE scan (Layer 2, base-image side): pnpm audit at `security` only sees
+  # the npm dependency tree. The shipped artifact also carries Alpine OS packages
+  # from node:22-alpine — trivy is what catches a high/critical CVE in those that
+  # the npm audit cannot. ignore-unfixed keeps the gate honest: node:22-alpine
+  # routinely ships base CVEs with no upstream fix, and gating on those would pin
+  # the build permanently red and block every unrelated PR until a base bump that
+  # may not exist. So this fails ONLY on a HIGH/CRITICAL that actually has a fix.
+  image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # Each job runs on a fresh runner with no shared local image, and the
+      # `docker` job above tears its image down. Build our own with an explicit
+      # tag (context is the repo root: the Dockerfile COPYs package manifests,
+      # the workspace packages, and examples/ relative to it) so trivy has a
+      # predictable reference instead of the compose-derived name.
+      - name: Build server image
+        run: docker build -t makerchecker-server:ci -f packages/server/Dockerfile .
+      - name: Trivy image scan (gate on fixable HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: makerchecker-server:ci
+          scan-type: image
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+
+  # SBOM (evidence, non-gating): emit a machine-readable CycloneDX bill of
+  # materials a self-hosting regulated buyer can ingest. This generates and
+  # uploads evidence — it must never fail the PR, so there is no exit-code here
+  # (sbom-action does not fail on findings). syft reads both the OS and JS layers
+  # of the actual shipped image, plus the full source dependency tree.
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # Build the image so the SBOM reflects exactly what ships (pruned prod
+      # node_modules + Alpine OS packages), not just what is in the repo.
+      - name: Build server image
+        run: docker build -t makerchecker-server:ci -f packages/server/Dockerfile .
+      # upload-artifact is disabled on each sbom-action step so the action does
+      # not auto-upload twice under the same name (upload-artifact@v4 errors on a
+      # duplicate name); a single consolidated upload below controls the name.
+      - name: Generate CycloneDX SBOM (image)
+        uses: anchore/sbom-action@v0
+        with:
+          image: makerchecker-server:ci
+          format: cyclonedx-json
+          output-file: sbom-image.cdx.json
+          upload-artifact: false
+      - name: Generate CycloneDX SBOM (source tree)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom-source.cdx.json
+          upload-artifact: false
+      # if-no-files-found: error so a silently-empty SBOM (e.g. a bad output-file
+      # path) fails the job loudly instead of uploading nothing.
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom-*.cdx.json
+          if-no-files-found: error
+
   # The Python SDK is outside the pnpm/turbo workspace, so it gets its own lane:
   # lint (ruff), strict types (mypy), and tests (pytest, no server needed).
   python-sdk:

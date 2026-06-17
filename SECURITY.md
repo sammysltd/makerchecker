@@ -39,6 +39,7 @@ MakerChecker is built for regulated, adversarial-insider environments. The harde
 - **SSRF and DNS rebinding are blocked on every outbound path** (skill fetch, webhooks, MCP transport) by static host validation plus connect-time IP pinning. Leave `MAKERCHECKER_ALLOW_PRIVATE_SKILL_HOSTS` unset in production.
 - **Demo seeding is opt-in.** With `MAKERCHECKER_SEED_DEMO` unset, no admin account or admin API key is created.
 - **Role limits fail closed.** Limits are schema-validated (non-coercing) at write time and pinned per `(run, role)`; the runtime denies any limit it cannot interpret.
+- **Ship with a CycloneDX SBOM and a scanned image.** CI emits a machine-readable SBOM of the shipped server image and its dependency tree as a build artifact, and scans the image for known CVEs; the scan gates on fixable high/critical findings so a self-hosting deployment can audit what it runs.
 
 ## Auditing the audit chain
 
