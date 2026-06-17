@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
+  apiErrorMessage,
+  createGrant,
+  createRole,
+  createSodConstraint,
   decideApproval,
   getAgent,
   getApiKey,
@@ -16,6 +20,8 @@ import {
   listRoles,
   listRuns,
   listSkills,
+  revokeGrant,
+  revokeSodConstraint,
   setApiKey,
   triggerFlow,
   UNAUTHORIZED_EVENT,
@@ -191,6 +197,101 @@ describe("endpoints", () => {
     const fn2 = mockFetch(200, { flow: { id: "f1" }, versions: [] });
     await getFlow("daily-cash-reconciliation");
     expect(lastCall(fn2).url).toBe("/api/flows/daily-cash-reconciliation");
+  });
+});
+
+describe("access-control mutations", () => {
+  const ROLE_A = "11111111-1111-1111-1111-111111111111";
+  const ROLE_B = "22222222-2222-2222-2222-222222222222";
+  const SKILL = "33333333-3333-3333-3333-333333333333";
+
+  it("creates a role with only a name", async () => {
+    const fn = mockFetch(201, { role: { id: "ro9" } });
+    const res = await createRole({ name: "recon-approver-role" });
+    expect(res.role.id).toBe("ro9");
+    const { url, init } = lastCall(fn);
+    expect(url).toBe("/api/roles");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "recon-approver-role" });
+  });
+
+  it("creates a role with description and limits", async () => {
+    const fn = mockFetch(201, { role: { id: "ro9" } });
+    await createRole({
+      name: "payments-role",
+      description: "moves money",
+      limits: { run: { maxTokens: 1000 } },
+    });
+    expect(JSON.parse(lastCall(fn).init.body as string)).toEqual({
+      name: "payments-role",
+      description: "moves money",
+      limits: { run: { maxTokens: 1000 } },
+    });
+  });
+
+  it("creates a grant with roleId and skillId", async () => {
+    const fn = mockFetch(201, { grant: { id: "g9" } });
+    await createGrant(ROLE_A, SKILL);
+    const { url, init } = lastCall(fn);
+    expect(url).toBe("/api/grants");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ roleId: ROLE_A, skillId: SKILL });
+  });
+
+  it("revokes a grant by grant id with no body", async () => {
+    const fn = mockFetch(200, { grant: { id: "g9", revoked_at: "now" } });
+    await revokeGrant("g 9");
+    const { url, init } = lastCall(fn);
+    expect(url).toBe("/api/grants/g%209/revoke");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+  });
+
+  it("creates a SoD constraint with the role ids", async () => {
+    const fn = mockFetch(201, { sodConstraint: { id: "sc9" } });
+    await createSodConstraint({ roleAId: ROLE_A, roleBId: ROLE_B, description: "no self-approval" });
+    const { url, init } = lastCall(fn);
+    expect(url).toBe("/api/sod-constraints");
+    expect(JSON.parse(init.body as string)).toEqual({
+      roleAId: ROLE_A,
+      roleBId: ROLE_B,
+      description: "no self-approval",
+    });
+  });
+
+  it("omits description from a SoD body when not given", async () => {
+    const fn = mockFetch(201, { sodConstraint: { id: "sc9" } });
+    await createSodConstraint({ roleAId: ROLE_A, roleBId: ROLE_B });
+    expect(JSON.parse(lastCall(fn).init.body as string)).toEqual({
+      roleAId: ROLE_A,
+      roleBId: ROLE_B,
+    });
+  });
+
+  it("revokes a SoD constraint by constraint id", async () => {
+    const fn = mockFetch(200, { sodConstraint: { id: "sc9" } });
+    await revokeSodConstraint("sc9");
+    const { url, init } = lastCall(fn);
+    expect(url).toBe("/api/sod-constraints/sc9/revoke");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+  });
+});
+
+describe("apiErrorMessage", () => {
+  it("unwraps a JSON { error } body from an ApiError", () => {
+    const err = new ApiError(403, JSON.stringify({ error: "admin privileges required" }));
+    expect(apiErrorMessage(err)).toBe("admin privileges required");
+  });
+
+  it("falls back to the message for a non-JSON ApiError body", () => {
+    const err = new ApiError(500, "<html>boom</html>");
+    expect(apiErrorMessage(err)).toContain("500");
+  });
+
+  it("handles plain errors and non-errors", () => {
+    expect(apiErrorMessage(new Error("local"))).toBe("local");
+    expect(apiErrorMessage("raw string")).toBe("raw string");
   });
 });
 
