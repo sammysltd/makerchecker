@@ -2,6 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 
 import {
+  AddGrantForm,
+  AddSodForm,
+  CreateRoleForm,
+  RevokeGrantButton,
+  RevokeSodButton,
+} from "../components/RoleControls";
+import {
   EmptyNote,
   ErrorNote,
   Loading,
@@ -47,6 +54,11 @@ export function RolesPage() {
           ))}
         </tbody>
       </table>
+
+      <h2 className="mt-10 text-[11px] font-medium uppercase tracking-[0.1em] text-stone-400">
+        Create a role
+      </h2>
+      <CreateRoleForm />
     </div>
   );
 }
@@ -77,15 +89,18 @@ export function RoleDetailPage() {
               <span className="text-xs text-stone-500">
                 granted <RelTime iso={grant.granted_at} />
               </span>
-              {grant.revoked_at && (
+              {grant.revoked_at ? (
                 <span className="text-xs font-medium text-blocked">
                   revoked <RelTime iso={grant.revoked_at} />
                 </span>
+              ) : (
+                <RevokeGrantButton roleId={roleId} grantId={grant.id} />
               )}
             </li>
           ))}
         </ul>
       )}
+      <AddGrantForm roleId={roleId} />
 
       <h2 className="mt-8 text-[11px] font-medium uppercase tracking-[0.1em] text-stone-400">
         Segregation-of-duties constraints
@@ -108,10 +123,14 @@ export function RoleDetailPage() {
                 {constraint.revoked_at && <span className="ml-2">(revoked)</span>}
               </p>
               <p className="mt-0.5 text-xs">{constraint.description}</p>
+              {!constraint.revoked_at && (
+                <RevokeSodButton roleId={roleId} constraintId={constraint.id} />
+              )}
             </li>
           ))}
         </ul>
       )}
+      <AddSodForm roleId={roleId} roleName={role.name} />
     </div>
   );
 }

@@ -19,6 +19,25 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The human-readable message for a failed request. The server sends JSON
+ * `{ error: "..." }` bodies but `request` stores the raw text, so `ApiError`'s
+ * own message is the JSON-wrapped form. This unwraps it: an `ApiError` whose
+ * body parses to `{ error }` surfaces the bare server string (e.g.
+ * "admin privileges required"); anything else falls back to the error message.
+ */
+export function apiErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    try {
+      const parsed = JSON.parse(error.body) as { error?: unknown };
+      if (typeof parsed.error === "string") return parsed.error;
+    } catch {
+      /* not JSON — fall through */
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function getApiKey(): string | null {
   return localStorage.getItem(API_KEY_STORAGE);
 }
@@ -337,6 +356,74 @@ export function listRoles(): Promise<{ roles: RoleSummary[] }> {
 
 export function getRole(id: string): Promise<RoleDetail> {
   return request(`/roles/${encodeURIComponent(id)}`);
+}
+
+export interface CreatedRole {
+  id: string;
+  name: string;
+  description: string;
+  limits: Record<string, unknown>;
+  created_at: string;
+}
+
+export function createRole(input: {
+  name: string;
+  description?: string;
+  limits?: Record<string, unknown>;
+}): Promise<{ role: CreatedRole }> {
+  const body: Record<string, unknown> = { name: input.name };
+  if (input.description !== undefined) body.description = input.description;
+  if (input.limits !== undefined) body.limits = input.limits;
+  return request("/roles", { method: "POST", body: JSON.stringify(body) });
+}
+
+export interface CreatedGrant {
+  id: string;
+  role_id: string;
+  skill_id: string;
+  created_at: string;
+  revoked_at: string | null;
+}
+
+export function createGrant(roleId: string, skillId: string): Promise<{ grant: CreatedGrant }> {
+  return request("/grants", {
+    method: "POST",
+    body: JSON.stringify({ roleId, skillId }),
+  });
+}
+
+export function revokeGrant(grantId: string): Promise<{ grant: CreatedGrant }> {
+  return request(`/grants/${encodeURIComponent(grantId)}/revoke`, { method: "POST" });
+}
+
+export interface CreatedSodConstraint {
+  id: string;
+  role_a_id: string;
+  role_b_id: string;
+  description: string | null;
+  created_at: string;
+  revoked_at: string | null;
+}
+
+export function createSodConstraint(input: {
+  roleAId: string;
+  roleBId: string;
+  description?: string;
+}): Promise<{ sodConstraint: CreatedSodConstraint }> {
+  const body: Record<string, unknown> = {
+    roleAId: input.roleAId,
+    roleBId: input.roleBId,
+  };
+  if (input.description !== undefined) body.description = input.description;
+  return request("/sod-constraints", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function revokeSodConstraint(
+  constraintId: string,
+): Promise<{ sodConstraint: CreatedSodConstraint }> {
+  return request(`/sod-constraints/${encodeURIComponent(constraintId)}/revoke`, {
+    method: "POST",
+  });
 }
 
 export function listFlows(): Promise<{ flows: FlowSummary[] }> {
