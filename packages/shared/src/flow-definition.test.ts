@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isApprovalGate, validateFlowDefinition } from "./flow-definition.js";
+import {
+  gateEnforcesSeparation,
+  isApprovalGate,
+  validateFlowDefinition,
+  type FlowStep,
+} from "./flow-definition.js";
 
 const VALID = {
   name: "daily-cash-reconciliation",
@@ -283,5 +288,31 @@ describe("isApprovalGate", () => {
     const ok = validateFlowDefinition(VALID);
     if (!ok.ok) throw new Error("fixture invalid");
     expect(ok.definition.steps.map(isApprovalGate)).toEqual([false, true, false]);
+  });
+});
+
+describe("gateEnforcesSeparation", () => {
+  const gate = (approvals?: Record<string, unknown>): FlowStep =>
+    ({ key: "g", type: "approval_gate", title: "G", ...(approvals ? { approvals } : {}) }) as FlowStep;
+  const agent: FlowStep = { key: "s", agent: "a", skills: ["x@1"] } as FlowStep;
+
+  it("is false for an agent step", () => {
+    expect(gateEnforcesSeparation(agent)).toBe(false);
+  });
+
+  it("is false for a legacy gate (no approvals object — requester could self-approve)", () => {
+    expect(gateEnforcesSeparation(gate())).toBe(false);
+  });
+
+  it("is true for an identity-mode gate (forbid_requester defaults on)", () => {
+    expect(gateEnforcesSeparation(gate({ min_approvals: 1 }))).toBe(true);
+  });
+
+  it("is true when forbid_requester is explicitly true", () => {
+    expect(gateEnforcesSeparation(gate({ forbid_requester: true }))).toBe(true);
+  });
+
+  it("is false when forbid_requester is explicitly disabled", () => {
+    expect(gateEnforcesSeparation(gate({ forbid_requester: false }))).toBe(false);
   });
 });

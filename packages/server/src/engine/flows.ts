@@ -1,4 +1,5 @@
 import {
+  gateEnforcesSeparation,
   isApprovalGate,
   validateFlowDefinition,
   type FlowDefinition,
@@ -79,19 +80,23 @@ export async function publishFlowVersion(
 }
 
 /**
- * Publish-time risk check: a high-risk skill may only appear in a step that
- * has an approval gate somewhere before it. Skills not yet in the registry
- * are tolerated here (runtime enforcement still denies them by default).
+ * Publish-time risk check: a high-risk skill may only appear in a step that has
+ * a SEPARATION-ENFORCING approval gate somewhere before it — an identity-mode
+ * gate (`approvals` object) that does not disable `forbid_requester`. A legacy
+ * gate proves a human paused, but lets the run's own requester self-approve, so
+ * it cannot guard an irreversible high-risk action (see gateEnforcesSeparation).
+ * Skills not yet in the registry are tolerated here (runtime enforcement still
+ * denies them by default).
  */
 async function validateRiskTiers(pool: Pool, definition: FlowDefinition): Promise<void> {
   const errors: string[] = [];
-  let gateSeen = false;
+  let separationGateSeen = false;
   for (const step of definition.steps) {
     if (isApprovalGate(step)) {
-      gateSeen = true;
+      if (gateEnforcesSeparation(step)) separationGateSeen = true;
       continue;
     }
-    if (gateSeen) continue;
+    if (separationGateSeen) continue;
     for (const ref of step.skills) {
       const { name, version } = parseSkillRef(ref);
       const { rows } = await pool.query<{ risk_tier: string }>(
@@ -100,7 +105,9 @@ async function validateRiskTiers(pool: Pool, definition: FlowDefinition): Promis
       );
       if (rows[0]?.risk_tier === "high") {
         errors.push(
-          `step "${step.key}": skill "${ref}" is high-risk and requires a preceding approval gate`,
+          `step "${step.key}": skill "${ref}" is high-risk and requires a preceding approval ` +
+            "gate that enforces approver separation (an `approvals` object with forbid_requester " +
+            "not disabled), so the run's requester cannot approve their own work",
         );
       }
     }

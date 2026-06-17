@@ -8,7 +8,9 @@ import type { PoolClient } from "pg";
  *  1. agent exists and is active
  *  2. every skill@version exists and is published
  *  3. every skill is GRANTED to the agent's role (unrevoked grant — deny by default)
- *  4. high-risk skills require a preceding approval gate in the flow
+ *  4. high-risk skills require a preceding SEPARATION-ENFORCING approval gate
+ *     (identity-mode, forbid_requester not disabled) — a legacy gate the
+ *     requester could self-approve does not satisfy this
  *  5. segregation of duties: no role that conflicts with the agent's role may
  *     already have acted in this run (checked against frozen role snapshots)
  */
@@ -42,8 +44,12 @@ export interface EnforceInput {
   skillRefs: string[];
   /** Run context for SoD evaluation. */
   runId: string;
-  /** Whether an approval gate precedes this step in the flow definition. */
-  hasPrecedingGate: boolean;
+  /**
+   * Whether a SEPARATION-ENFORCING approval gate (identity-mode, forbid_requester
+   * not disabled) precedes this step. A legacy gate the requester could
+   * self-approve is NOT one, so it does not unlock a high-risk skill.
+   */
+  hasSeparationGate: boolean;
 }
 
 export function parseSkillRef(ref: string): { name: string; version: number } {
@@ -141,10 +147,11 @@ export async function enforce(client: PoolClient, input: EnforceInput): Promise<
       );
     }
 
-    if (skill.risk_tier === "high" && !input.hasPrecedingGate) {
+    if (skill.risk_tier === "high" && !input.hasSeparationGate) {
       throw new EnforcementError(
         "high_risk_requires_gate",
-        `skill "${ref}" is high-risk and requires a preceding approval gate`,
+        `skill "${ref}" is high-risk and requires a preceding approval gate that enforces ` +
+          "approver separation (the run's requester cannot approve their own work)",
       );
     }
 
