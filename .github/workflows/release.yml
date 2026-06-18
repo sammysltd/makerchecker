@@ -1,0 +1,51 @@
+name: release
+
+# Publishes the public npm packages (@makerchecker/sdk and the connectors) when a
+# version tag is pushed. The release flow:
+#   1. bump the version in each package.json you want to ship
+#   2. commit, then:  git tag v1.2.3 && git push origin v1.2.3
+#
+# Auth: add an npm "Automation" access token as the repository secret NPM_TOKEN
+# (Settings -> Secrets and variables -> Actions -> New repository secret).
+# `--provenance` attaches a signed build attestation linking each published
+# package to this exact workflow run. `pnpm -r publish` skips private packages
+# (server, web, shared) and any version already on the registry.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write # required to generate npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Build publishable packages
+        run: >
+          corepack pnpm
+          --filter "@makerchecker/sdk..."
+          --filter "@makerchecker/connector-claude-agent..."
+          --filter "@makerchecker/connector-langchain..."
+          build
+
+      - name: Publish to npm with provenance
+        run: corepack pnpm -r publish --access public --provenance --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
