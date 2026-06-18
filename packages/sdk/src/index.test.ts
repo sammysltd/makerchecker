@@ -219,6 +219,24 @@ describe("grants", () => {
   });
 });
 
+describe("sod", () => {
+  it("creates and revokes SoD constraints", async () => {
+    const f = mockFetch(201, { sodConstraint: { id: "sod-1" } });
+    const client = createClient({ baseUrl: "http://api.example", fetch: f });
+
+    await client.sod.create({ roleAId: "ro-a", roleBId: "ro-b", description: "maker cannot check" });
+    expect(lastCall(f).url).toBe("http://api.example/api/sod-constraints");
+    expect(JSON.parse(lastCall(f).init.body as string)).toEqual({
+      roleAId: "ro-a",
+      roleBId: "ro-b",
+      description: "maker cannot check",
+    });
+
+    await client.sod.revoke("sod-1");
+    expect(lastCall(f).url).toBe("http://api.example/api/sod-constraints/sod-1/revoke");
+  });
+});
+
 describe("audit", () => {
   it("verifies the chain", async () => {
     const f = mockFetch(200, { ok: true, count: 12, headHash: "abc" });

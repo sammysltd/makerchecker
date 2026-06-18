@@ -152,6 +152,16 @@ export interface Grant {
   revoked_at: string | null;
 }
 
+export interface SodConstraint {
+  id: string;
+  role_a_id: string;
+  role_b_id: string;
+  scope: string;
+  description: string;
+  created_at: string;
+  revoked_at: string | null;
+}
+
 export interface ProxySession {
   id: string;
   label: string;
@@ -312,6 +322,12 @@ export function createClient(options: ClientOptions) {
       create: (input: { roleId: string; skillId: string }) =>
         request<{ grant: Grant }>("POST", "/api/grants", input),
       revoke: (id: string) => request<{ grant: Grant }>("POST", `/api/grants/${id}/revoke`),
+    },
+
+    sod: {
+      create: (input: { roleAId: string; roleBId: string; description?: string }) =>
+        request<{ sodConstraint: SodConstraint }>("POST", "/api/sod-constraints", input),
+      revoke: (id: string) => request<{ sodConstraint: SodConstraint }>("POST", `/api/sod-constraints/${id}/revoke`),
     },
 
     audit: {
