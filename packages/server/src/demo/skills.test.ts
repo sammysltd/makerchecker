@@ -7,11 +7,17 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SequentialInvokerExecutor } from "../skills/sequential-executor.js";
 import {
   accrualDraft,
+  batchDisposition,
+  batchQuarantine,
   caseIntake,
+  caseTriage,
   complaintIngest,
   csvIngest,
   dispositionAct,
+  e2bSubmit,
+  emIngest,
   erpExtract,
+  excursionAssess,
   excursionIngest,
   gtnWaterfall,
   mdrDraft,
@@ -19,7 +25,7 @@ import {
   quarantine,
   reportabilityTriage,
   reportGen,
-  seriousnessTriage,
+  seriousnessAssess,
   stabilityAssess,
   txnMatch,
 } from "./skills.js";
@@ -78,6 +84,23 @@ beforeAll(() => {
     join(dir, "cold-chain-disposition", "readings.csv"),
     "minute,temp_c\n" +
       "0,4\n30,4\n60,5\n90,6\n120,9\n150,12\n180,15\n210,14\n240,11\n270,9\n300,7\n330,6\n360,5\n",
+  );
+  mkdirSync(join(dir, "gmp-em-excursion"));
+  // A SINGLE batch incident, the product's validated EM limits, and the
+  // viable-air sampling time-series — mirroring the examples/ fixture layout.
+  writeFileSync(
+    join(dir, "gmp-em-excursion", "excursions.csv"),
+    "batch_id,product,room,units,value_usd\n" +
+      "BATCH-7731,Sterifil Injectable 50mg,GRADE-B-FILL-02,12000,318000.00\n",
+  );
+  writeFileSync(
+    join(dir, "gmp-em-excursion", "em_limits.csv"),
+    "product,action_limit_cfu,max_excursion_minutes\nSterifil Injectable 50mg,10,60\n",
+  );
+  writeFileSync(
+    join(dir, "gmp-em-excursion", "em_readings.csv"),
+    "minute,cfu\n" +
+      "0,1\n30,2\n60,3\n90,6\n120,14\n150,27\n180,38\n210,31\n240,18\n270,11\n300,7\n330,4\n360,2\n",
   );
 });
 
@@ -372,20 +395,20 @@ describe("caseIntake", () => {
   });
 });
 
-describe("seriousnessTriage", () => {
-  const icsr = (over: Record<string, string>) => ({
-    case_id: "P-0",
-    drug: "DrugX",
-    event: "Event",
-    seriousness: "non-serious",
-    expectedness: "expected",
-    country: "US",
-    received_date: "2026-06-01",
-    ...over,
-  });
+const icsr = (over: Record<string, string>) => ({
+  case_id: "P-0",
+  drug: "DrugX",
+  event: "Event",
+  seriousness: "non-serious",
+  expectedness: "expected",
+  country: "US",
+  received_date: "2026-06-01",
+  ...over,
+});
 
-  it("only serious AND unexpected goes onto the 15-day expedited clock", async () => {
-    const out = (await seriousnessTriage(
+describe("caseTriage (advisory pre-gate proposal, low risk)", () => {
+  it("only serious AND unexpected is proposed for the 15-day expedited clock", async () => {
+    const out = (await caseTriage(
       {
         cases: [
           icsr({ case_id: "P-1", seriousness: "serious", expectedness: "unexpected", country: "DE" }),
@@ -401,16 +424,73 @@ describe("seriousnessTriage", () => {
     expect(out.expedited).toEqual([
       expect.objectContaining({ caseId: "P-1", clock: "15-day expedited (21 CFR 314.80)" }),
     ]);
+    // It only PROPOSES — the rationale flags it is pending confirmation.
+    expect(out.expedited[0]!.rationale).toContain("pending medical-reviewer confirmation");
     // The expedited clock is source-independent: P-1 is foreign-sourced.
     expect(out.expedited[0]!.rationale).toContain("regardless of source (received from DE");
     expect(out.periodic.map((c) => c.caseId)).toEqual(["P-2", "P-3"]);
-    for (const c of out.periodic) {
-      expect(c.rationale).toContain("serious-and-unexpected test");
-    }
   });
 
   it("defaults empty input to an empty queue", async () => {
-    expect(await seriousnessTriage({}, sig())).toMatchObject({
+    expect(await caseTriage({}, sig())).toMatchObject({
+      caseCount: 0,
+      expeditedCount: 0,
+    });
+  });
+});
+
+describe("seriousnessAssess (binding determination, high risk, post-gate)", () => {
+  it("CONFIRMS serious AND unexpected and starts the 15-day clock", async () => {
+    const out = (await seriousnessAssess(
+      {
+        expedited: [
+          {
+            caseId: "P-1",
+            drug: "DrugA",
+            event: "Hepatic failure",
+            seriousness: "serious",
+            expectedness: "unexpected",
+            country: "DE",
+            receivedDate: "2026-06-01",
+            clock: "15-day expedited (21 CFR 314.80)",
+            rationale: "proposed",
+          },
+        ],
+        periodic: [{ caseId: "P-2", drug: "DrugB", rationale: "periodic" }],
+      },
+      sig(),
+    )) as {
+      expeditedCount: number;
+      expedited: Array<{ caseId: string; clock: string; rationale: string }>;
+      periodic: Array<{ caseId: string }>;
+    };
+    expect(out.expeditedCount).toBe(1);
+    expect(out.expedited[0]).toMatchObject({
+      caseId: "P-1",
+      clock: "15-day expedited (21 CFR 314.80)",
+    });
+    expect(out.expedited[0]!.rationale).toContain("CONFIRMED serious and unexpected");
+    expect(out.expedited[0]!.rationale).toContain("the 15-day expedited clock");
+    // The carried-forward periodic proposal is preserved.
+    expect(out.periodic.map((c) => c.caseId)).toContain("P-2");
+  });
+
+  it("falls back to raw cases when no triage proposal is carried forward", async () => {
+    const out = (await seriousnessAssess(
+      {
+        cases: [
+          icsr({ case_id: "P-9", seriousness: "serious", expectedness: "unexpected" }),
+          icsr({ case_id: "P-8", seriousness: "serious", expectedness: "expected" }),
+        ],
+      },
+      sig(),
+    )) as { expeditedCount: number; expedited: Array<{ caseId: string }> };
+    expect(out.expeditedCount).toBe(1);
+    expect(out.expedited[0]!.caseId).toBe("P-9");
+  });
+
+  it("defaults empty input to an empty queue", async () => {
+    expect(await seriousnessAssess({}, sig())).toMatchObject({
       caseCount: 0,
       expeditedCount: 0,
     });
@@ -418,7 +498,7 @@ describe("seriousnessTriage", () => {
 });
 
 describe("narrativeDraft", () => {
-  it("drafts one E2B(R3)-bound narrative per expedited case", async () => {
+  it("drafts one E2B(R3)-cited narrative per confirmed expedited case", async () => {
     const out = (await narrativeDraft(
       {
         expedited: [
@@ -433,15 +513,45 @@ describe("narrativeDraft", () => {
         ],
       },
       sig(),
-    )) as { icsrCount: number; narratives: Array<{ narrative: string }>; channel: string };
+    )) as { icsrCount: number; narratives: Array<{ narrative: string }> };
     expect(out.icsrCount).toBe(1);
     expect(out.narratives[0]!.narrative).toContain("P-1");
     expect(out.narratives[0]!.narrative).toContain("E2B(R3)");
-    expect(out.channel).toBe("#pv");
+    expect(out.narratives[0]!.narrative).toContain("21 CFR 314.80");
   });
 
   it("defaults missing cases to zero narratives", async () => {
     expect(await narrativeDraft({}, sig())).toMatchObject({ icsrCount: 0 });
+  });
+});
+
+describe("e2bSubmit (irreversible transmission, high risk, post-gate)", () => {
+  it("transmits one E2B(R3) report per narrative and is notification-ready", async () => {
+    const out = (await e2bSubmit(
+      {
+        narratives: [{ caseId: "P-1", drug: "DrugA" }],
+        expedited: [{ caseId: "P-1", clock: "15-day expedited (21 CFR 314.80)" }],
+      },
+      sig(),
+    )) as {
+      submittedCount: number;
+      submissions: Array<{ format: string; submitted: boolean; clock: string }>;
+      channel: string;
+      message: string;
+    };
+    expect(out.submittedCount).toBe(1);
+    expect(out.submissions[0]).toMatchObject({
+      format: "E2B(R3)",
+      submitted: true,
+      clock: "15-day expedited (21 CFR 314.80)",
+    });
+    // Notification-ready so notify@1 runs directly downstream.
+    expect(out.channel).toBe("#pv");
+    expect(out.message).toContain("transmitted");
+  });
+
+  it("defaults missing narratives to zero submissions", async () => {
+    expect(await e2bSubmit({}, sig())).toMatchObject({ submittedCount: 0, channel: "#pv" });
   });
 });
 
@@ -1035,6 +1145,368 @@ describe("dispositionAct", () => {
     expect(await dispositionAct({}, sig())).toMatchObject({
       releasedCount: 0,
       destroyedCount: 0,
+      heldForJudgmentCount: 1,
+    });
+  });
+});
+
+describe("emIngest", () => {
+  it("throws without paths and without DEMO_DATA_DIR", async () => {
+    const saved = process.env.DEMO_DATA_DIR;
+    delete process.env.DEMO_DATA_DIR;
+    try {
+      await expect(emIngest({}, sig())).rejects.toThrow(
+        /excursionsPath, limitsPath and readingsPath/,
+      );
+    } finally {
+      if (saved !== undefined) process.env.DEMO_DATA_DIR = saved;
+    }
+  });
+
+  it("resolves all three fixtures as siblings of DEMO_DATA_DIR and joins the batch to limits", async () => {
+    const saved = process.env.DEMO_DATA_DIR;
+    process.env.DEMO_DATA_DIR = join(dir, "demo-data");
+    try {
+      const out = (await emIngest({}, sig())) as {
+        incident: { batch: string; product: string; room: string; units: number; valueUsd: number };
+        actionLimitCfu: number | null;
+        maxExcursionMinutes: number | null;
+        intervalMinutes: number;
+        readings: Array<{ minute: number; cfu: number }>;
+      };
+      // The single batch incident, joined to the Sterifil validated EM limits.
+      expect(out.incident).toEqual({
+        batch: "BATCH-7731",
+        product: "Sterifil Injectable 50mg",
+        room: "GRADE-B-FILL-02",
+        units: 12000,
+        valueUsd: 318000,
+      });
+      expect(out.actionLimitCfu).toBe(10);
+      expect(out.maxExcursionMinutes).toBe(60);
+      // Interval inferred from the first two readings.
+      expect(out.intervalMinutes).toBe(30);
+      expect(out.readings).toHaveLength(13);
+      expect(out.readings[0]).toEqual({ minute: 0, cfu: 1 });
+      expect(out.readings[6]).toEqual({ minute: 180, cfu: 38 });
+    } finally {
+      if (saved !== undefined) process.env.DEMO_DATA_DIR = saved;
+      else delete process.env.DEMO_DATA_DIR;
+    }
+  });
+
+  it("reads explicitly supplied paths and builds the incident, actionLimitCfu and readings", async () => {
+    const saved = process.env.DEMO_DATA_DIR;
+    process.env.DEMO_DATA_DIR = join(dir, "demo-data");
+    try {
+      const out = (await emIngest(
+        {
+          excursionsPath: join(dir, "gmp-em-excursion", "excursions.csv"),
+          limitsPath: join(dir, "gmp-em-excursion", "em_limits.csv"),
+          readingsPath: join(dir, "gmp-em-excursion", "em_readings.csv"),
+        },
+        sig(),
+      )) as {
+        incident: { batch: string; units: number };
+        actionLimitCfu: number | null;
+        maxExcursionMinutes: number | null;
+        readings: Array<{ minute: number; cfu: number }>;
+      };
+      expect(out.incident.batch).toBe("BATCH-7731");
+      expect(out.incident.units).toBe(12000);
+      expect(out.actionLimitCfu).toBe(10);
+      expect(out.maxExcursionMinutes).toBe(60);
+      expect(out.readings).toHaveLength(13);
+    } finally {
+      if (saved !== undefined) process.env.DEMO_DATA_DIR = saved;
+      else delete process.env.DEMO_DATA_DIR;
+    }
+  });
+
+  it("carries null limits for a product with no validated EM profile", async () => {
+    const saved = process.env.DEMO_DATA_DIR;
+    process.env.DEMO_DATA_DIR = join(dir, "demo-data");
+    const orphanLimits = join(dir, "gmp-em-excursion", "em_limits_orphan.csv");
+    writeFileSync(orphanLimits, "product,action_limit_cfu,max_excursion_minutes\nOtherProduct,5,30\n");
+    try {
+      const out = (await emIngest(
+        {
+          excursionsPath: join(dir, "gmp-em-excursion", "excursions.csv"),
+          // A limits file that omits Sterifil: the incident product is unknown.
+          limitsPath: orphanLimits,
+          readingsPath: join(dir, "gmp-em-excursion", "em_readings.csv"),
+        },
+        sig(),
+      )) as { actionLimitCfu: number | null; maxExcursionMinutes: number | null };
+      // No validated profile — limits propagate as null, never defaulted.
+      expect(out.actionLimitCfu).toBeNull();
+      expect(out.maxExcursionMinutes).toBeNull();
+    } finally {
+      if (saved !== undefined) process.env.DEMO_DATA_DIR = saved;
+      else delete process.env.DEMO_DATA_DIR;
+    }
+  });
+});
+
+describe("excursionAssess", () => {
+  // The seeded Sterifil series: peak 38 CFU, 6 readings >= 10 CFU => 180 min over.
+  const SEEDED = {
+    incident: {
+      batch: "BATCH-7731",
+      product: "Sterifil Injectable 50mg",
+      room: "GRADE-B-FILL-02",
+      units: 12000,
+      valueUsd: 318000,
+    },
+    actionLimitCfu: 10,
+    maxExcursionMinutes: 60,
+    intervalMinutes: 30,
+    readings: [
+      { minute: 0, cfu: 1 },
+      { minute: 30, cfu: 2 },
+      { minute: 60, cfu: 3 },
+      { minute: 90, cfu: 6 },
+      { minute: 120, cfu: 14 },
+      { minute: 150, cfu: 27 },
+      { minute: 180, cfu: 38 },
+      { minute: 210, cfu: 31 },
+      { minute: 240, cfu: 18 },
+      { minute: 270, cfu: 11 },
+      { minute: 300, cfu: 7 },
+      { minute: 330, cfu: 4 },
+      { minute: 360, cfu: 2 },
+    ],
+  };
+
+  it("classifies the seeded series as beyond / reject and builds the excursion report", async () => {
+    const out = (await excursionAssess(SEEDED, sig())) as {
+      peakCfu: number;
+      minutesOverLimit: number;
+      classification: string;
+      recommendedDisposition: string;
+      holdList: string[];
+      report: { title: string; ref: string; body: string[]; footnotes: string[] };
+    };
+    expect(out.peakCfu).toBe(38);
+    // 6 readings at or above 10 CFU * 30-min interval = 180 minutes over limit.
+    expect(out.minutesOverLimit).toBe(180);
+    expect(out.classification).toBe("beyond");
+    expect(out.recommendedDisposition).toBe("reject");
+    expect(out.holdList).toEqual(["BATCH-7731"]);
+
+    expect(out.report.title).toBe("Environmental Monitoring Excursion Report");
+    expect(out.report.ref).toBe("EMIR-2026-0731");
+    // Exactly three body paragraphs and three footnotes, built dynamically.
+    expect(out.report.body).toHaveLength(3);
+    expect(out.report.footnotes).toHaveLength(3);
+    // [1] in para 1, [2] and [3] in para 2, no citation in para 3.
+    expect(out.report.body[0]).toContain("[1]");
+    expect(out.report.body[0]).toContain("peak of 38 CFU against the validated 10 CFU action limit");
+    expect(out.report.body[0]).toContain("180 minutes");
+    expect(out.report.body[1]).toContain("[2]");
+    expect(out.report.body[1]).toContain("[3]");
+    expect(out.report.body[1]).toContain("180 minutes");
+    expect(out.report.body[1]).toContain("60-minute");
+    expect(out.report.body[1]).toContain("recommended for rejection");
+    expect(out.report.body[2]).not.toContain("[");
+    expect(out.report.body[2]).toContain("21 CFR 211.22");
+    expect(out.report.footnotes[1]).toContain("Sterifil Injectable 50mg");
+  });
+
+  it("classifies within / release when the peak never reaches the limit", async () => {
+    const out = (await excursionAssess(
+      {
+        ...SEEDED,
+        // A clean trace: every reading below the 10 CFU limit.
+        readings: [
+          { minute: 0, cfu: 1 },
+          { minute: 30, cfu: 4 },
+          { minute: 60, cfu: 8 },
+          { minute: 90, cfu: 5 },
+        ],
+      },
+      sig(),
+    )) as {
+      peakCfu: number;
+      minutesOverLimit: number;
+      classification: string;
+      recommendedDisposition: string;
+      report: { body: string[] };
+    };
+    expect(out.peakCfu).toBe(8);
+    expect(out.minutesOverLimit).toBe(0);
+    expect(out.classification).toBe("within");
+    expect(out.recommendedDisposition).toBe("release");
+    expect(out.report.body[1]).toContain("recommended for release");
+  });
+
+  it("classifies borderline / escalate when over the limit but within the allowance", async () => {
+    const out = (await excursionAssess(
+      {
+        ...SEEDED,
+        // Peak 14 CFU > 10 limit, but only 1 reading >= 10 => 30 min < 60 allowance.
+        readings: [
+          { minute: 0, cfu: 2 },
+          { minute: 30, cfu: 14 },
+          { minute: 60, cfu: 7 },
+          { minute: 90, cfu: 3 },
+        ],
+      },
+      sig(),
+    )) as {
+      peakCfu: number;
+      minutesOverLimit: number;
+      classification: string;
+      recommendedDisposition: string;
+      report: { body: string[] };
+    };
+    expect(out.peakCfu).toBe(14);
+    expect(out.minutesOverLimit).toBe(30);
+    expect(out.classification).toBe("borderline");
+    expect(out.recommendedDisposition).toBe("escalate");
+    expect(out.report.body[1]).toContain("escalation to the quality unit");
+  });
+
+  it("treats a null limit as borderline / escalate (fail safe)", async () => {
+    const out = (await excursionAssess(
+      { ...SEEDED, actionLimitCfu: null, maxExcursionMinutes: null },
+      sig(),
+    )) as {
+      peakCfu: number;
+      minutesOverLimit: number;
+      classification: string;
+      recommendedDisposition: string;
+      report: { body: string[] };
+    };
+    // No limit to count against — nothing is over.
+    expect(out.minutesOverLimit).toBe(0);
+    expect(out.classification).toBe("borderline");
+    expect(out.recommendedDisposition).toBe("escalate");
+    // The report still has three paragraphs and three footnotes.
+    expect(out.report.body).toHaveLength(3);
+  });
+
+  it("defaults empty input gracefully (no readings => peak 0)", async () => {
+    const out = (await excursionAssess({}, sig())) as {
+      peakCfu: number;
+      minutesOverLimit: number;
+      classification: string;
+      holdList: string[];
+      report: { body: string[]; footnotes: string[] };
+    };
+    expect(out.peakCfu).toBe(0);
+    expect(out.minutesOverLimit).toBe(0);
+    // No limit known => fail-safe borderline.
+    expect(out.classification).toBe("borderline");
+    expect(out.holdList).toEqual([]);
+    expect(out.report.body).toHaveLength(3);
+    expect(out.report.footnotes).toHaveLength(3);
+  });
+});
+
+describe("batchQuarantine", () => {
+  it("forwards the assessment and marks the batch held (the safe direction)", async () => {
+    const assessment = {
+      incident: { batch: "BATCH-7731", product: "Sterifil Injectable 50mg", units: 12000, valueUsd: 318000 },
+      actionLimitCfu: 10,
+      classification: "beyond",
+      recommendedDisposition: "reject",
+      report: { title: "Environmental Monitoring Excursion Report" },
+    };
+    const out = (await batchQuarantine(assessment, sig())) as {
+      held: boolean;
+      heldUnits: number;
+      holdList: string[];
+      classification: string;
+      recommendedDisposition: string;
+      report: { title: string };
+    };
+    expect(out.held).toBe(true);
+    expect(out.heldUnits).toBe(12000);
+    expect(out.holdList).toEqual(["BATCH-7731"]);
+    // The full assessment is carried forward to the gated disposition step.
+    expect(out.classification).toBe("beyond");
+    expect(out.recommendedDisposition).toBe("reject");
+    expect(out.report.title).toBe("Environmental Monitoring Excursion Report");
+  });
+
+  it("defaults empty input to nothing held", async () => {
+    expect(await batchQuarantine({}, sig())).toMatchObject({
+      held: true,
+      heldUnits: 0,
+      holdList: [],
+    });
+  });
+});
+
+describe("batchDisposition", () => {
+  it("rejects the single incident batch when the recommendation is reject", async () => {
+    const out = (await batchDisposition(
+      {
+        incident: { batch: "BATCH-7731", units: 12000, valueUsd: 318000 },
+        recommendedDisposition: "reject",
+      },
+      sig(),
+    )) as {
+      releasedCount: number;
+      rejectedCount: number;
+      heldForJudgmentCount: number;
+      releasedValue: number;
+      rejectedValue: number;
+      rejected: Array<{ batchId: string; units: number; valueUsd: number }>;
+      channel: string;
+      message: string;
+    };
+    expect(out.releasedCount).toBe(0);
+    expect(out.rejectedCount).toBe(1);
+    expect(out.heldForJudgmentCount).toBe(0);
+    expect(out.rejectedValue).toBe(318000);
+    expect(out.rejected[0]).toEqual({ batchId: "BATCH-7731", units: 12000, valueUsd: 318000 });
+    expect(out.channel).toBe("#em-qa");
+    expect(out.message).toContain("1 rejected");
+  });
+
+  it("releases the single incident batch when the recommendation is release", async () => {
+    const out = (await batchDisposition(
+      {
+        incident: { batch: "BATCH-7731", units: 12000, valueUsd: 318000 },
+        recommendedDisposition: "release",
+      },
+      sig(),
+    )) as {
+      releasedCount: number;
+      rejectedCount: number;
+      releasedValue: number;
+      released: Array<{ batchId: string }>;
+      message: string;
+    };
+    expect(out.releasedCount).toBe(1);
+    expect(out.rejectedCount).toBe(0);
+    expect(out.releasedValue).toBe(318000);
+    expect(out.released[0]!.batchId).toBe("BATCH-7731");
+    expect(out.message).toContain("1 batch(es) released");
+  });
+
+  it("holds the incident for judgment on an escalate recommendation (default)", async () => {
+    const out = (await batchDisposition(
+      { incident: { batch: "BATCH-7731", units: 12000, valueUsd: 318000 } },
+      sig(),
+    )) as {
+      releasedCount: number;
+      rejectedCount: number;
+      heldForJudgmentCount: number;
+      heldForJudgment: Array<{ batchId: string }>;
+    };
+    expect(out.releasedCount).toBe(0);
+    expect(out.rejectedCount).toBe(0);
+    expect(out.heldForJudgmentCount).toBe(1);
+    expect(out.heldForJudgment[0]!.batchId).toBe("BATCH-7731");
+  });
+
+  it("defaults missing incident to a zero-value held disposition", async () => {
+    expect(await batchDisposition({}, sig())).toMatchObject({
+      releasedCount: 0,
+      rejectedCount: 0,
       heldForJudgmentCount: 1,
     });
   });

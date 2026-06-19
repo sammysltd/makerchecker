@@ -9,6 +9,7 @@ import amlFixture from "./fixtures/aml.json";
 import coldchainFixture from "./fixtures/coldchain.json";
 import gtnFixture from "./fixtures/gtn.json";
 import mdrFixture from "./fixtures/mdr.json";
+import pvFixture from "./fixtures/pv.json";
 
 /* ---------------------------------------------------------------------------
    The live demo — a cinematic, guided walkthrough.
@@ -19,7 +20,7 @@ import mdrFixture from "./fixtures/mdr.json";
    then the agent tries to sign its own report and MakerChecker BLOCKS it; the
    human makes the call with a real decision button. The audit trail + chain
    badge alongside are the REAL product components, fed by fixtures captured
-   from real seeded runs (drift-guarded in CI). Four scenarios.
+   from real seeded runs (drift-guarded in CI). Five scenarios.
 --------------------------------------------------------------------------- */
 
 interface Fixture {
@@ -163,6 +164,72 @@ const SCENARIOS: Scenario[] = [
       {
         title: "An agent in production, under control",
         body: "The agent triaged at machine speed; a named regulatory officer owned the reportability decision; and every step is a signed, tamper-evident record a regulator can verify offline.",
+      },
+    ],
+  },
+  {
+    id: "pv",
+    tab: "Pharmacovigilance",
+    domain: "ICSR processing",
+    fixture: pvFixture as unknown as Fixture,
+    agent: "pv-case-processor",
+    officerRole: "the medical reviewer",
+    report: {
+      docType: "ICSR Expedited-Reportability Assessment",
+      ref: "ICSR-2026-4003",
+      date: "13 Jun 2026",
+      body: [
+        "Case P-4003 (Cardevol 10mg) reports acute liver failure — a serious and unexpected adverse experience. Serious-and-unexpected meets the test for a 15-day expedited ICSR (\"Alert report\") under 21 CFR 314.80, transmitted in ICH E2B(R3) format [1].",
+        "Case P-4009 (Gastrelin 40mg) reports an anaphylactic reaction, serious and unexpected, received from a foreign source (DE) — also 15-day expedited; the clock is source-independent [2]. Eight further cases were non-serious-and-expected and route to periodic reporting.",
+        "Recommendation: confirm both as serious and unexpected and file within the 15-day clock. The binding seriousness determination and the E2B(R3) submission are regulated, irreversible acts and are not the agent's to make [3].",
+      ],
+      footnotes: [
+        "Case record P-4003 — Cardevol 10mg",
+        "21 CFR 314.80 — postmarketing expedited (15-day) reporting",
+        "PV SOP ICSR-015 — Expedited Submission (ICH E2B(R3))",
+      ],
+      chart: {
+        kind: "bars",
+        items: [
+          { label: "4001", value: 1 },
+          { label: "4002", value: 1 },
+          { label: "4003", value: 3, flag: true },
+          { label: "4004", value: 1 },
+          { label: "4005", value: 2 },
+          { label: "4006", value: 1 },
+          { label: "4007", value: 2 },
+          { label: "4008", value: 1 },
+          { label: "4009", value: 3, flag: true },
+          { label: "4010", value: 1 },
+        ],
+        threshold: 3,
+        thresholdLabel: "expedited (serious+unexpected)",
+        caption: "10 cases triaged — P-4003 & P-4009 serious+unexpected (15-day expedited)",
+      },
+      blockedNote: "The agent attempted to confirm and file the case it triaged.",
+      decisionQ: "Medical review — medical reviewer",
+      primary: "Confirm expedited",
+      secondary: "Route to periodic",
+    },
+    stops: [
+      {
+        title: "An AI agent triages safety cases",
+        body: "MakerChecker, governing a real pharmacovigilance workflow. A case-processor agent is triaging today's adverse-event cases against the serious-and-unexpected test. Press start to watch it run.",
+        cta: "Start the run",
+      },
+      {
+        title: "It produced an ICSR assessment",
+        body: "The agent wrote a full ICSR Expedited-Reportability Assessment — the acute liver-failure case, the 15-day clock under 21 CFR 314.80, sources, and a chart of the day's cases. But confirming seriousness and filing the E2B(R3) report aren't the agent's to do. Watch it try to sign its own assessment.",
+        cta: "Let it try to self-approve",
+      },
+      {
+        title: "Blocked — the maker cannot be the checker",
+        body: "Starting the 15-day clock and transmitting an ICSR are high-risk, irreversible acts; MakerChecker won't let the agent that triaged a case also confirm and file it (21 CFR 211.22 quality-unit independence), and recorded the attempt. Now it's your call.",
+        cta: "I'll decide it myself",
+      },
+      {
+        title: "An agent in production, under control",
+        body: "The agent triaged the safety queue at machine speed; a named medical reviewer confirmed seriousness before the clock started and the report filed; and the whole run is a signed, tamper-evident record an inspector can verify offline.",
       },
     ],
   },

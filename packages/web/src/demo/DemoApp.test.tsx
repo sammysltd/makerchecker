@@ -57,6 +57,11 @@ describe("DemoApp", () => {
     fireEvent.click(screen.getByRole("button", { name: /Skip the walkthrough/i }));
     expect(screen.getByText(/Adverse-Event Reportability Assessment/i)).toBeTruthy();
 
+    // Pharmacovigilance (bar chart with threshold).
+    fireEvent.click(screen.getByRole("button", { name: /Pharmacovigilance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Skip the walkthrough/i }));
+    expect(screen.getByText(/ICSR Expedited-Reportability Assessment/i)).toBeTruthy();
+
     // Pharma pricing (waterfall chart).
     fireEvent.click(screen.getByRole("button", { name: /Pharma pricing/i }));
     fireEvent.click(screen.getByRole("button", { name: /Skip the walkthrough/i }));

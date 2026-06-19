@@ -1,0 +1,2772 @@
+{
+  "meta": {
+    "flow": "gmp-em-excursion-disposition",
+    "note": "Captured from a real seeded run (auth enabled). Do not hand-edit; regenerate with CAPTURE_WRITE=1."
+  },
+  "actors": {
+    "analyst": {
+      "name": "Demo Admin",
+      "email": "admin@makerchecker.local"
+    },
+    "officer": {
+      "name": "Demo Approving Officer",
+      "email": "officer@makerchecker.local"
+    }
+  },
+  "scenes": {
+    "running": {
+      "run": {
+        "id": "e9504175-4f45-4506-9a39-89fbe74e45f2",
+        "flow": "gmp-em-excursion-disposition",
+        "version": 1,
+        "definition": {
+          "name": "gmp-em-excursion-disposition",
+          "steps": [
+            {
+              "key": "assess",
+              "agent": "em-monitor",
+              "skills": [
+                "em-ingest@1",
+                "excursion-assess@1",
+                "batch-quarantine@1"
+              ],
+              "retries": {
+                "backoff": "exponential",
+                "max_attempts": 3
+              },
+              "timeout_ms": 120000,
+              "instructions": "Ingest the EM excursion record, the validated alert/action limits, and the viable-air sampling time-series, assess the affected batch (within / beyond / borderline) with a rationale, an EM excursion report, and a recommended disposition, and quarantine the affected batch — holding is the safe direction and needs no gate."
+            },
+            {
+              "key": "disposition_decision",
+              "type": "approval_gate",
+              "title": "Batch disposition — QA release or reject",
+              "approvals": {
+                "min_approvals": 1,
+                "forbid_requester": true
+              }
+            },
+            {
+              "key": "act",
+              "agent": "em-monitor",
+              "skills": [
+                "batch-disposition@1",
+                "notify@1"
+              ],
+              "timeout_ms": 120000,
+              "instructions": "Execute the QA-decided disposition: release the within-spec batch, reject the beyond-spec batch, leave a borderline batch held for QA judgment, and notify the EM/QA channel."
+            }
+          ]
+        },
+        "status": "running",
+        "failure_reason": null,
+        "input": {
+          "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+          "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+          "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+        },
+        "triggered_by": {
+          "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+          "name": "admin@makerchecker.local",
+          "type": "user"
+        },
+        "created_at": "2026-06-19T18:35:29.881Z",
+        "started_at": "2026-06-19T18:35:29.898Z",
+        "finished_at": null
+      },
+      "steps": [
+        {
+          "id": "7faabadb-cf3b-4e70-9493-612f381b2404",
+          "step_index": 0,
+          "step_key": "assess",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+            "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+            "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+          },
+          "output": {
+            "held": true,
+            "report": {
+              "ref": "EMIR-2026-0731",
+              "body": [
+                "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+              ],
+              "title": "Environmental Monitoring Excursion Report",
+              "footnotes": [
+                "Viable-air trace EM-7731-2026.csv",
+                "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+              ]
+            },
+            "peakCfu": 38,
+            "holdList": [
+              "BATCH-7731"
+            ],
+            "incident": {
+              "room": "GRADE-B-FILL-02",
+              "batch": "BATCH-7731",
+              "units": 12000,
+              "product": "Sterifil Injectable 50mg",
+              "valueUsd": 318000
+            },
+            "readings": [
+              {
+                "cfu": 1,
+                "minute": 0
+              },
+              {
+                "cfu": 2,
+                "minute": 30
+              },
+              {
+                "cfu": 3,
+                "minute": 60
+              },
+              {
+                "cfu": 6,
+                "minute": 90
+              },
+              {
+                "cfu": 14,
+                "minute": 120
+              },
+              {
+                "cfu": 27,
+                "minute": 150
+              },
+              {
+                "cfu": 38,
+                "minute": 180
+              },
+              {
+                "cfu": 31,
+                "minute": 210
+              },
+              {
+                "cfu": 18,
+                "minute": 240
+              },
+              {
+                "cfu": 11,
+                "minute": 270
+              },
+              {
+                "cfu": 7,
+                "minute": 300
+              },
+              {
+                "cfu": 4,
+                "minute": 330
+              },
+              {
+                "cfu": 2,
+                "minute": 360
+              }
+            ],
+            "heldUnits": 12000,
+            "actionLimitCfu": 10,
+            "classification": "beyond",
+            "intervalMinutes": 30,
+            "minutesOverLimit": 180,
+            "maxExcursionMinutes": 60,
+            "recommendedDisposition": "reject"
+          },
+          "error": null,
+          "agent": "em-monitor",
+          "started_at": "2026-06-19T18:35:29.898Z",
+          "finished_at": "2026-06-19T18:35:29.968Z"
+        }
+      ],
+      "approvals": [],
+      "auditEvents": [
+        {
+          "seq": "15",
+          "occurred_at": "2026-06-19T18:35:29.886Z",
+          "actor": {
+            "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "run.created",
+          "payload": {
+            "input": {
+              "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+              "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+              "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+            },
+            "flowVersionId": "e8a6f1eb-72c4-431e-9deb-f6af7229da26"
+          },
+          "hash": "1c0b189973a4c96d1a2b3099174afcea5d42fceb69c6548e61a406ba0d124952"
+        },
+        {
+          "seq": "16",
+          "occurred_at": "2026-06-19T18:35:29.917Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "em-ingest@1",
+              "excursion-assess@1",
+              "batch-quarantine@1"
+            ],
+            "attempt": 1,
+            "stepKey": "assess",
+            "stepIndex": 0
+          },
+          "hash": "cd693a61307a3d60770a5f76185114be225ac1fde7ddaedbe13325eab624dc51"
+        },
+        {
+          "seq": "17",
+          "occurred_at": "2026-06-19T18:35:29.946Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+              "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+              "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+            },
+            "output": {
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "intervalMinutes": 30,
+              "maxExcursionMinutes": 60
+            },
+            "stepKey": "assess",
+            "skillRef": "em-ingest@1"
+          },
+          "hash": "3e3d895a51314263f3436b3345c18d416a2f7fb7119d283a3edea41a5b432ed0"
+        },
+        {
+          "seq": "18",
+          "occurred_at": "2026-06-19T18:35:29.962Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "intervalMinutes": 30,
+              "maxExcursionMinutes": 60
+            },
+            "output": {
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "stepKey": "assess",
+            "skillRef": "excursion-assess@1"
+          },
+          "hash": "5252d0d5c26d4d724ea0dac4f6e93243fe09f56a171c51e55e0360506d549543"
+        },
+        {
+          "seq": "19",
+          "occurred_at": "2026-06-19T18:35:29.966Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "output": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "stepKey": "assess",
+            "skillRef": "batch-quarantine@1"
+          },
+          "hash": "278854e296fcf3aeeef2ea9ef1dad26998229f2c2017f7426b20373698d66e48"
+        },
+        {
+          "seq": "20",
+          "occurred_at": "2026-06-19T18:35:29.971Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "attempt": 1,
+            "stepKey": "assess"
+          },
+          "hash": "03a2578bc451c642feb646900c4a8d625af7685093dc04c6c5094747f1ec7111"
+        }
+      ]
+    },
+    "waiting": {
+      "run": {
+        "id": "e9504175-4f45-4506-9a39-89fbe74e45f2",
+        "flow": "gmp-em-excursion-disposition",
+        "version": 1,
+        "definition": {
+          "name": "gmp-em-excursion-disposition",
+          "steps": [
+            {
+              "key": "assess",
+              "agent": "em-monitor",
+              "skills": [
+                "em-ingest@1",
+                "excursion-assess@1",
+                "batch-quarantine@1"
+              ],
+              "retries": {
+                "backoff": "exponential",
+                "max_attempts": 3
+              },
+              "timeout_ms": 120000,
+              "instructions": "Ingest the EM excursion record, the validated alert/action limits, and the viable-air sampling time-series, assess the affected batch (within / beyond / borderline) with a rationale, an EM excursion report, and a recommended disposition, and quarantine the affected batch — holding is the safe direction and needs no gate."
+            },
+            {
+              "key": "disposition_decision",
+              "type": "approval_gate",
+              "title": "Batch disposition — QA release or reject",
+              "approvals": {
+                "min_approvals": 1,
+                "forbid_requester": true
+              }
+            },
+            {
+              "key": "act",
+              "agent": "em-monitor",
+              "skills": [
+                "batch-disposition@1",
+                "notify@1"
+              ],
+              "timeout_ms": 120000,
+              "instructions": "Execute the QA-decided disposition: release the within-spec batch, reject the beyond-spec batch, leave a borderline batch held for QA judgment, and notify the EM/QA channel."
+            }
+          ]
+        },
+        "status": "waiting_approval",
+        "failure_reason": null,
+        "input": {
+          "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+          "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+          "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+        },
+        "triggered_by": {
+          "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+          "name": "admin@makerchecker.local",
+          "type": "user"
+        },
+        "created_at": "2026-06-19T18:35:29.881Z",
+        "started_at": "2026-06-19T18:35:29.898Z",
+        "finished_at": null
+      },
+      "steps": [
+        {
+          "id": "7faabadb-cf3b-4e70-9493-612f381b2404",
+          "step_index": 0,
+          "step_key": "assess",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+            "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+            "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+          },
+          "output": {
+            "held": true,
+            "report": {
+              "ref": "EMIR-2026-0731",
+              "body": [
+                "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+              ],
+              "title": "Environmental Monitoring Excursion Report",
+              "footnotes": [
+                "Viable-air trace EM-7731-2026.csv",
+                "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+              ]
+            },
+            "peakCfu": 38,
+            "holdList": [
+              "BATCH-7731"
+            ],
+            "incident": {
+              "room": "GRADE-B-FILL-02",
+              "batch": "BATCH-7731",
+              "units": 12000,
+              "product": "Sterifil Injectable 50mg",
+              "valueUsd": 318000
+            },
+            "readings": [
+              {
+                "cfu": 1,
+                "minute": 0
+              },
+              {
+                "cfu": 2,
+                "minute": 30
+              },
+              {
+                "cfu": 3,
+                "minute": 60
+              },
+              {
+                "cfu": 6,
+                "minute": 90
+              },
+              {
+                "cfu": 14,
+                "minute": 120
+              },
+              {
+                "cfu": 27,
+                "minute": 150
+              },
+              {
+                "cfu": 38,
+                "minute": 180
+              },
+              {
+                "cfu": 31,
+                "minute": 210
+              },
+              {
+                "cfu": 18,
+                "minute": 240
+              },
+              {
+                "cfu": 11,
+                "minute": 270
+              },
+              {
+                "cfu": 7,
+                "minute": 300
+              },
+              {
+                "cfu": 4,
+                "minute": 330
+              },
+              {
+                "cfu": 2,
+                "minute": 360
+              }
+            ],
+            "heldUnits": 12000,
+            "actionLimitCfu": 10,
+            "classification": "beyond",
+            "intervalMinutes": 30,
+            "minutesOverLimit": 180,
+            "maxExcursionMinutes": 60,
+            "recommendedDisposition": "reject"
+          },
+          "error": null,
+          "agent": "em-monitor",
+          "started_at": "2026-06-19T18:35:29.898Z",
+          "finished_at": "2026-06-19T18:35:29.968Z"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "d843c7e5-64af-4c61-b3e9-4a708d8da639",
+          "step_key": "disposition_decision",
+          "status": "pending",
+          "requested_at": "2026-06-19T18:35:29.976Z",
+          "decided_at": null,
+          "reason": null,
+          "required_approvals": 1,
+          "decided_by": null,
+          "decisions": []
+        }
+      ],
+      "auditEvents": [
+        {
+          "seq": "15",
+          "occurred_at": "2026-06-19T18:35:29.886Z",
+          "actor": {
+            "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "run.created",
+          "payload": {
+            "input": {
+              "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+              "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+              "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+            },
+            "flowVersionId": "e8a6f1eb-72c4-431e-9deb-f6af7229da26"
+          },
+          "hash": "1c0b189973a4c96d1a2b3099174afcea5d42fceb69c6548e61a406ba0d124952"
+        },
+        {
+          "seq": "16",
+          "occurred_at": "2026-06-19T18:35:29.917Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "em-ingest@1",
+              "excursion-assess@1",
+              "batch-quarantine@1"
+            ],
+            "attempt": 1,
+            "stepKey": "assess",
+            "stepIndex": 0
+          },
+          "hash": "cd693a61307a3d60770a5f76185114be225ac1fde7ddaedbe13325eab624dc51"
+        },
+        {
+          "seq": "17",
+          "occurred_at": "2026-06-19T18:35:29.946Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+              "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+              "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+            },
+            "output": {
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "intervalMinutes": 30,
+              "maxExcursionMinutes": 60
+            },
+            "stepKey": "assess",
+            "skillRef": "em-ingest@1"
+          },
+          "hash": "3e3d895a51314263f3436b3345c18d416a2f7fb7119d283a3edea41a5b432ed0"
+        },
+        {
+          "seq": "18",
+          "occurred_at": "2026-06-19T18:35:29.962Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "intervalMinutes": 30,
+              "maxExcursionMinutes": 60
+            },
+            "output": {
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "stepKey": "assess",
+            "skillRef": "excursion-assess@1"
+          },
+          "hash": "5252d0d5c26d4d724ea0dac4f6e93243fe09f56a171c51e55e0360506d549543"
+        },
+        {
+          "seq": "19",
+          "occurred_at": "2026-06-19T18:35:29.966Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "output": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "stepKey": "assess",
+            "skillRef": "batch-quarantine@1"
+          },
+          "hash": "278854e296fcf3aeeef2ea9ef1dad26998229f2c2017f7426b20373698d66e48"
+        },
+        {
+          "seq": "20",
+          "occurred_at": "2026-06-19T18:35:29.971Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "attempt": 1,
+            "stepKey": "assess"
+          },
+          "hash": "03a2578bc451c642feb646900c4a8d625af7685093dc04c6c5094747f1ec7111"
+        },
+        {
+          "seq": "21",
+          "occurred_at": "2026-06-19T18:35:29.981Z",
+          "actor": {
+            "id": "engine",
+            "type": "system"
+          },
+          "event_type": "approval.requested",
+          "payload": {
+            "title": "Batch disposition — QA release or reject",
+            "stepKey": "disposition_decision",
+            "stepIndex": 1,
+            "requiredApprovals": 1
+          },
+          "hash": "4d70b602a9c2751a18450b220f18f17f82b8946c9dae09dec373b5d3e2ab6720"
+        }
+      ]
+    },
+    "completed": {
+      "run": {
+        "id": "e9504175-4f45-4506-9a39-89fbe74e45f2",
+        "flow": "gmp-em-excursion-disposition",
+        "version": 1,
+        "definition": {
+          "name": "gmp-em-excursion-disposition",
+          "steps": [
+            {
+              "key": "assess",
+              "agent": "em-monitor",
+              "skills": [
+                "em-ingest@1",
+                "excursion-assess@1",
+                "batch-quarantine@1"
+              ],
+              "retries": {
+                "backoff": "exponential",
+                "max_attempts": 3
+              },
+              "timeout_ms": 120000,
+              "instructions": "Ingest the EM excursion record, the validated alert/action limits, and the viable-air sampling time-series, assess the affected batch (within / beyond / borderline) with a rationale, an EM excursion report, and a recommended disposition, and quarantine the affected batch — holding is the safe direction and needs no gate."
+            },
+            {
+              "key": "disposition_decision",
+              "type": "approval_gate",
+              "title": "Batch disposition — QA release or reject",
+              "approvals": {
+                "min_approvals": 1,
+                "forbid_requester": true
+              }
+            },
+            {
+              "key": "act",
+              "agent": "em-monitor",
+              "skills": [
+                "batch-disposition@1",
+                "notify@1"
+              ],
+              "timeout_ms": 120000,
+              "instructions": "Execute the QA-decided disposition: release the within-spec batch, reject the beyond-spec batch, leave a borderline batch held for QA judgment, and notify the EM/QA channel."
+            }
+          ]
+        },
+        "status": "completed",
+        "failure_reason": null,
+        "input": {
+          "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+          "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+          "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+        },
+        "triggered_by": {
+          "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+          "name": "admin@makerchecker.local",
+          "type": "user"
+        },
+        "created_at": "2026-06-19T18:35:29.881Z",
+        "started_at": "2026-06-19T18:35:29.898Z",
+        "finished_at": "2026-06-19T18:35:30.192Z"
+      },
+      "steps": [
+        {
+          "id": "7faabadb-cf3b-4e70-9493-612f381b2404",
+          "step_index": 0,
+          "step_key": "assess",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+            "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+            "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+          },
+          "output": {
+            "held": true,
+            "report": {
+              "ref": "EMIR-2026-0731",
+              "body": [
+                "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+              ],
+              "title": "Environmental Monitoring Excursion Report",
+              "footnotes": [
+                "Viable-air trace EM-7731-2026.csv",
+                "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+              ]
+            },
+            "peakCfu": 38,
+            "holdList": [
+              "BATCH-7731"
+            ],
+            "incident": {
+              "room": "GRADE-B-FILL-02",
+              "batch": "BATCH-7731",
+              "units": 12000,
+              "product": "Sterifil Injectable 50mg",
+              "valueUsd": 318000
+            },
+            "readings": [
+              {
+                "cfu": 1,
+                "minute": 0
+              },
+              {
+                "cfu": 2,
+                "minute": 30
+              },
+              {
+                "cfu": 3,
+                "minute": 60
+              },
+              {
+                "cfu": 6,
+                "minute": 90
+              },
+              {
+                "cfu": 14,
+                "minute": 120
+              },
+              {
+                "cfu": 27,
+                "minute": 150
+              },
+              {
+                "cfu": 38,
+                "minute": 180
+              },
+              {
+                "cfu": 31,
+                "minute": 210
+              },
+              {
+                "cfu": 18,
+                "minute": 240
+              },
+              {
+                "cfu": 11,
+                "minute": 270
+              },
+              {
+                "cfu": 7,
+                "minute": 300
+              },
+              {
+                "cfu": 4,
+                "minute": 330
+              },
+              {
+                "cfu": 2,
+                "minute": 360
+              }
+            ],
+            "heldUnits": 12000,
+            "actionLimitCfu": 10,
+            "classification": "beyond",
+            "intervalMinutes": 30,
+            "minutesOverLimit": 180,
+            "maxExcursionMinutes": 60,
+            "recommendedDisposition": "reject"
+          },
+          "error": null,
+          "agent": "em-monitor",
+          "started_at": "2026-06-19T18:35:29.898Z",
+          "finished_at": "2026-06-19T18:35:29.968Z"
+        },
+        {
+          "id": "b162bc3d-4e96-4784-a33b-e9d716c2ac2c",
+          "step_index": 2,
+          "step_key": "act",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "held": true,
+            "report": {
+              "ref": "EMIR-2026-0731",
+              "body": [
+                "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+              ],
+              "title": "Environmental Monitoring Excursion Report",
+              "footnotes": [
+                "Viable-air trace EM-7731-2026.csv",
+                "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+              ]
+            },
+            "peakCfu": 38,
+            "holdList": [
+              "BATCH-7731"
+            ],
+            "incident": {
+              "room": "GRADE-B-FILL-02",
+              "batch": "BATCH-7731",
+              "units": 12000,
+              "product": "Sterifil Injectable 50mg",
+              "valueUsd": 318000
+            },
+            "readings": [
+              {
+                "cfu": 1,
+                "minute": 0
+              },
+              {
+                "cfu": 2,
+                "minute": 30
+              },
+              {
+                "cfu": 3,
+                "minute": 60
+              },
+              {
+                "cfu": 6,
+                "minute": 90
+              },
+              {
+                "cfu": 14,
+                "minute": 120
+              },
+              {
+                "cfu": 27,
+                "minute": 150
+              },
+              {
+                "cfu": 38,
+                "minute": 180
+              },
+              {
+                "cfu": 31,
+                "minute": 210
+              },
+              {
+                "cfu": 18,
+                "minute": 240
+              },
+              {
+                "cfu": 11,
+                "minute": 270
+              },
+              {
+                "cfu": 7,
+                "minute": 300
+              },
+              {
+                "cfu": 4,
+                "minute": 330
+              },
+              {
+                "cfu": 2,
+                "minute": 360
+              }
+            ],
+            "heldUnits": 12000,
+            "actionLimitCfu": 10,
+            "classification": "beyond",
+            "intervalMinutes": 30,
+            "minutesOverLimit": 180,
+            "maxExcursionMinutes": 60,
+            "recommendedDisposition": "reject"
+          },
+          "output": {
+            "channel": "#em-qa",
+            "message": "EM excursion disposition executed at QA decision: 0 batch(es) released (0.00), 1 rejected (318000.00), 0 held for QA judgment.",
+            "delivered": true,
+            "deliveredAt": "2026-06-19T18:35:30.182Z"
+          },
+          "error": null,
+          "agent": "em-monitor",
+          "started_at": "2026-06-19T18:35:30.030Z",
+          "finished_at": "2026-06-19T18:35:30.187Z"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "d843c7e5-64af-4c61-b3e9-4a708d8da639",
+          "step_key": "disposition_decision",
+          "status": "approved",
+          "requested_at": "2026-06-19T18:35:29.976Z",
+          "decided_at": "2026-06-19T18:35:30.021Z",
+          "reason": "BATCH-7731 is beyond validated EM limits (38 CFU peak vs 10 CFU action limit, ~180 min over the 60 min allowance); reject the batch per 21 CFR 211.22. Quarantine confirmed.",
+          "required_approvals": 1,
+          "decided_by": "officer@makerchecker.local",
+          "decisions": [
+            {
+              "id": "c91dcf93-985e-48c2-b20d-5c0cf8315df6",
+              "decision": "approved",
+              "reason": "BATCH-7731 is beyond validated EM limits (38 CFU peak vs 10 CFU action limit, ~180 min over the 60 min allowance); reject the batch per 21 CFR 211.22. Quarantine confirmed.",
+              "created_at": "2026-06-19T18:35:30.021Z",
+              "decided_by": "officer@makerchecker.local"
+            }
+          ]
+        }
+      ],
+      "auditEvents": [
+        {
+          "seq": "15",
+          "occurred_at": "2026-06-19T18:35:29.886Z",
+          "actor": {
+            "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "run.created",
+          "payload": {
+            "input": {
+              "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+              "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+              "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+            },
+            "flowVersionId": "e8a6f1eb-72c4-431e-9deb-f6af7229da26"
+          },
+          "hash": "1c0b189973a4c96d1a2b3099174afcea5d42fceb69c6548e61a406ba0d124952"
+        },
+        {
+          "seq": "16",
+          "occurred_at": "2026-06-19T18:35:29.917Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "em-ingest@1",
+              "excursion-assess@1",
+              "batch-quarantine@1"
+            ],
+            "attempt": 1,
+            "stepKey": "assess",
+            "stepIndex": 0
+          },
+          "hash": "cd693a61307a3d60770a5f76185114be225ac1fde7ddaedbe13325eab624dc51"
+        },
+        {
+          "seq": "17",
+          "occurred_at": "2026-06-19T18:35:29.946Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "limitsPath": "examples/gmp-em-excursion/em_limits.csv",
+              "readingsPath": "examples/gmp-em-excursion/em_readings.csv",
+              "excursionsPath": "examples/gmp-em-excursion/excursions.csv"
+            },
+            "output": {
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "intervalMinutes": 30,
+              "maxExcursionMinutes": 60
+            },
+            "stepKey": "assess",
+            "skillRef": "em-ingest@1"
+          },
+          "hash": "3e3d895a51314263f3436b3345c18d416a2f7fb7119d283a3edea41a5b432ed0"
+        },
+        {
+          "seq": "18",
+          "occurred_at": "2026-06-19T18:35:29.962Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "intervalMinutes": 30,
+              "maxExcursionMinutes": 60
+            },
+            "output": {
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "stepKey": "assess",
+            "skillRef": "excursion-assess@1"
+          },
+          "hash": "5252d0d5c26d4d724ea0dac4f6e93243fe09f56a171c51e55e0360506d549543"
+        },
+        {
+          "seq": "19",
+          "occurred_at": "2026-06-19T18:35:29.966Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "output": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "stepKey": "assess",
+            "skillRef": "batch-quarantine@1"
+          },
+          "hash": "278854e296fcf3aeeef2ea9ef1dad26998229f2c2017f7426b20373698d66e48"
+        },
+        {
+          "seq": "20",
+          "occurred_at": "2026-06-19T18:35:29.971Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "attempt": 1,
+            "stepKey": "assess"
+          },
+          "hash": "03a2578bc451c642feb646900c4a8d625af7685093dc04c6c5094747f1ec7111"
+        },
+        {
+          "seq": "21",
+          "occurred_at": "2026-06-19T18:35:29.981Z",
+          "actor": {
+            "id": "engine",
+            "type": "system"
+          },
+          "event_type": "approval.requested",
+          "payload": {
+            "title": "Batch disposition — QA release or reject",
+            "stepKey": "disposition_decision",
+            "stepIndex": 1,
+            "requiredApprovals": 1
+          },
+          "hash": "4d70b602a9c2751a18450b220f18f17f82b8946c9dae09dec373b5d3e2ab6720"
+        },
+        {
+          "seq": "22",
+          "occurred_at": "2026-06-19T18:35:30.015Z",
+          "actor": {
+            "id": "04c0a0c9-2fb0-4611-af1d-f1b0ceba4fa4",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "approval.decision_denied",
+          "payload": {
+            "code": "requester_forbidden",
+            "reason": "the user who triggered this run cannot decide gate \"disposition_decision\" (forbid_requester)",
+            "stepKey": "disposition_decision",
+            "attemptedDecision": "approved"
+          },
+          "hash": "0cecc0c788b790dc4db9d4d4083f73fb3c20b05b1577c7075f7159661289e092"
+        },
+        {
+          "seq": "23",
+          "occurred_at": "2026-06-19T18:35:30.025Z",
+          "actor": {
+            "id": "39b53c9d-3654-417d-a97f-c1b34f88151c",
+            "name": "officer@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "approval.decided",
+          "payload": {
+            "reason": "BATCH-7731 is beyond validated EM limits (38 CFU peak vs 10 CFU action limit, ~180 min over the 60 min allowance); reject the batch per 21 CFR 211.22. Quarantine confirmed.",
+            "stepKey": "disposition_decision",
+            "decision": "approved",
+            "approvedCount": 1,
+            "rejectedCount": 0,
+            "requiredApprovals": 1
+          },
+          "hash": "dccc78bbd06654ca182c6c4415bfe7126268cfcf7d18303bd9f4105caf089ad0"
+        },
+        {
+          "seq": "24",
+          "occurred_at": "2026-06-19T18:35:30.026Z",
+          "actor": {
+            "id": "39b53c9d-3654-417d-a97f-c1b34f88151c",
+            "name": "officer@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "approval.resolved",
+          "payload": {
+            "outcome": "approved",
+            "stepKey": "disposition_decision",
+            "approvedCount": 1,
+            "rejectedCount": 0,
+            "requiredApprovals": 1
+          },
+          "hash": "4b515553b0b6e49a21f22baa9182f916ba74d6118d633fe0d51d74dc7788add7"
+        },
+        {
+          "seq": "25",
+          "occurred_at": "2026-06-19T18:35:30.038Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "batch-disposition@1",
+              "notify@1"
+            ],
+            "attempt": 1,
+            "stepKey": "act",
+            "stepIndex": 2
+          },
+          "hash": "ab235d868c0dde2408f6e5af14543e35f2a375b389225df91d168046cefeaf76"
+        },
+        {
+          "seq": "26",
+          "occurred_at": "2026-06-19T18:35:30.050Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "held": true,
+              "report": {
+                "ref": "EMIR-2026-0731",
+                "body": [
+                  "An environmental-monitoring excursion was detected in room GRADE-B-FILL-02 during fill of Sterifil Injectable 50mg (batch BATCH-7731, 12,000 units). Viable-air sampling recorded a peak of 38 CFU against the validated 10 CFU action limit, with counts at or above the limit for 180 minutes [1].",
+                  "Against the validated contamination-control limits, cumulative time at or above the action limit (180 minutes) exceeds the validated 60-minute excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond its validated EM specification and is recommended for rejection [3].",
+                  "Quarantine has been placed on the batch. Disposition is a one-way door and must be decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make."
+                ],
+                "title": "Environmental Monitoring Excursion Report",
+                "footnotes": [
+                  "Viable-air trace EM-7731-2026.csv",
+                  "Contamination Control Strategy CCS-2024-031 — Sterifil Injectable 50mg (EU GMP Annex 1)",
+                  "SOP QA-021 — EM Excursion Investigation & Batch Disposition"
+                ]
+              },
+              "peakCfu": 38,
+              "holdList": [
+                "BATCH-7731"
+              ],
+              "incident": {
+                "room": "GRADE-B-FILL-02",
+                "batch": "BATCH-7731",
+                "units": 12000,
+                "product": "Sterifil Injectable 50mg",
+                "valueUsd": 318000
+              },
+              "readings": [
+                {
+                  "cfu": 1,
+                  "minute": 0
+                },
+                {
+                  "cfu": 2,
+                  "minute": 30
+                },
+                {
+                  "cfu": 3,
+                  "minute": 60
+                },
+                {
+                  "cfu": 6,
+                  "minute": 90
+                },
+                {
+                  "cfu": 14,
+                  "minute": 120
+                },
+                {
+                  "cfu": 27,
+                  "minute": 150
+                },
+                {
+                  "cfu": 38,
+                  "minute": 180
+                },
+                {
+                  "cfu": 31,
+                  "minute": 210
+                },
+                {
+                  "cfu": 18,
+                  "minute": 240
+                },
+                {
+                  "cfu": 11,
+                  "minute": 270
+                },
+                {
+                  "cfu": 7,
+                  "minute": 300
+                },
+                {
+                  "cfu": 4,
+                  "minute": 330
+                },
+                {
+                  "cfu": 2,
+                  "minute": 360
+                }
+              ],
+              "heldUnits": 12000,
+              "actionLimitCfu": 10,
+              "classification": "beyond",
+              "intervalMinutes": 30,
+              "minutesOverLimit": 180,
+              "maxExcursionMinutes": 60,
+              "recommendedDisposition": "reject"
+            },
+            "output": {
+              "channel": "#em-qa",
+              "message": "EM excursion disposition executed at QA decision: 0 batch(es) released (0.00), 1 rejected (318000.00), 0 held for QA judgment.",
+              "rejected": [
+                {
+                  "units": 12000,
+                  "batchId": "BATCH-7731",
+                  "valueUsd": 318000
+                }
+              ],
+              "released": [],
+              "rejectedCount": 1,
+              "rejectedValue": 318000,
+              "releasedCount": 0,
+              "releasedValue": 0,
+              "heldForJudgment": [],
+              "heldForJudgmentCount": 0
+            },
+            "stepKey": "act",
+            "skillRef": "batch-disposition@1"
+          },
+          "hash": "68d49fc4384b97a56ef5c5c5c74be97449f48eadf442e0d286c5b687777ccc17"
+        },
+        {
+          "seq": "27",
+          "occurred_at": "2026-06-19T18:35:30.186Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "channel": "#em-qa",
+              "message": "EM excursion disposition executed at QA decision: 0 batch(es) released (0.00), 1 rejected (318000.00), 0 held for QA judgment.",
+              "rejected": [
+                {
+                  "units": 12000,
+                  "batchId": "BATCH-7731",
+                  "valueUsd": 318000
+                }
+              ],
+              "released": [],
+              "rejectedCount": 1,
+              "rejectedValue": 318000,
+              "releasedCount": 0,
+              "releasedValue": 0,
+              "heldForJudgment": [],
+              "heldForJudgmentCount": 0
+            },
+            "output": {
+              "channel": "#em-qa",
+              "message": "EM excursion disposition executed at QA decision: 0 batch(es) released (0.00), 1 rejected (318000.00), 0 held for QA judgment.",
+              "delivered": true,
+              "deliveredAt": "2026-06-19T18:35:30.182Z"
+            },
+            "stepKey": "act",
+            "skillRef": "notify@1"
+          },
+          "hash": "f5a0d1207f4a8d6912179394a22cc2f899426803305da170e655d0e1c9ffa647"
+        },
+        {
+          "seq": "28",
+          "occurred_at": "2026-06-19T18:35:30.189Z",
+          "actor": {
+            "id": "730af41f-64d2-4d08-b621-362d2e07e435",
+            "name": "em-monitor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "channel": "#em-qa",
+              "message": "EM excursion disposition executed at QA decision: 0 batch(es) released (0.00), 1 rejected (318000.00), 0 held for QA judgment.",
+              "delivered": true,
+              "deliveredAt": "2026-06-19T18:35:30.182Z"
+            },
+            "attempt": 1,
+            "stepKey": "act"
+          },
+          "hash": "c67899370a67f8676bb312ef70126a54bde09a3005dc5ff077d6d4783a2d34e8"
+        },
+        {
+          "seq": "29",
+          "occurred_at": "2026-06-19T18:35:30.196Z",
+          "actor": {
+            "id": "engine",
+            "type": "system"
+          },
+          "event_type": "run.completed",
+          "payload": {},
+          "hash": "48bb0747b6b6cd3d3c2256db42697f40c10b50dd486795dc7e5feee5f696a367"
+        }
+      ]
+    }
+  },
+  "approval": {
+    "id": "d843c7e5-64af-4c61-b3e9-4a708d8da639",
+    "run_id": "e9504175-4f45-4506-9a39-89fbe74e45f2",
+    "step_key": "disposition_decision",
+    "requested_at": "2026-06-19T18:35:29.976Z",
+    "required_approvals": 1,
+    "approved_count": 0,
+    "age_seconds": 0,
+    "overdue": false,
+    "flow": "gmp-em-excursion-disposition"
+  },
+  "blockedDecision": {
+    "status": 403,
+    "message": "the user who triggered this run cannot decide gate \"disposition_decision\" (forbid_requester)"
+  },
+  "approvedDecision": {
+    "status": 200
+  },
+  "verify": {
+    "ok": true,
+    "count": 29,
+    "headHash": "48bb0747b6b6cd3d3c2256db42697f40c10b50dd486795dc7e5feee5f696a367"
+  },
+  "runsList": {
+    "runs": [
+      {
+        "id": "e9504175-4f45-4506-9a39-89fbe74e45f2",
+        "flow": "gmp-em-excursion-disposition",
+        "version": 1,
+        "status": "completed",
+        "failure_reason": null,
+        "created_at": "2026-06-19T18:35:29.881Z",
+        "started_at": "2026-06-19T18:35:29.898Z",
+        "finished_at": "2026-06-19T18:35:30.192Z"
+      }
+    ]
+  }
+}

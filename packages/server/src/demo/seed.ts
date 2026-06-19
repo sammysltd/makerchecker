@@ -26,7 +26,12 @@ const SEED_ACTOR = { type: "system" as const, id: "seed", name: "demo seed" };
  * the monitor agent assesses stability and QUARANTINES affected lots ITSELF —
  * holding is the safe direction, allowed and recorded but ungated — while the
  * one-way release-or-destroy decision is gated to a named QA person; a
- * high-risk disposition skill structurally forces that gate). Idempotent: each
+ * high-risk disposition skill structurally forces that gate), and GMP
+ * Environmental-Monitoring Excursion Disposition (the same asymmetry re-skinned
+ * from a temperature excursion to a microbial/CFU cleanroom excursion: the
+ * monitor agent quarantines the affected batch itself, while the one-way
+ * release-or-reject decision is gated to the independent quality unit, enforcing
+ * 21 CFR 211.22 — a named signature AND executor != approver). Idempotent: each
  * cast is guarded by its flagship flow name, so seeding is safe on every boot —
  * including boots of databases seeded before a cast existed.
  */
@@ -38,6 +43,7 @@ export async function seedDemo(pool: Pool): Promise<void> {
   await seedPv(pool);
   await seedGtn(pool);
   await seedColdChain(pool);
+  await seedEm(pool);
 }
 
 async function seedAdmin(pool: Pool): Promise<void> {
@@ -460,11 +466,20 @@ async function seedMdr(pool: Pool): Promise<void> {
 }
 
 /**
- * PV ICSR Processing: the medicines demo. A case-processor agent ingests the
- * day's adverse-event cases and proposes seriousness/expectedness per
- * 21 CFR 314.80; the run parks at the "medical review" gate for the medical
- * reviewer (identity mode, requester forbidden); only then are the ICSR
- * narratives drafted and delivered. Assumes seedRecon ran first (notify@1).
+ * PV ICSR Processing: the medicines HERO demo, and the same safe/consequential
+ * ASYMMETRY as cold-chain. A case-processor agent ingests the day's
+ * adverse-event cases and only PROPOSES which look serious-and-unexpected per
+ * 21 CFR 314.80 (case-triage is advisory and ungated). The run parks at the
+ * "medical review" gate for the medical reviewer / physician (identity mode,
+ * requester forbidden). Only AFTER that human sign-off do the two irreversible,
+ * regulatory acts run: seriousness-assess makes the BINDING serious-and-
+ * unexpected determination that STARTS the 15-day expedited clock, and
+ * e2b-submit TRANSMITS the ICSR to the regulatory gateway in E2B(R3) format.
+ * Both are risk_tier 'high', so the flow grammar structurally forces the
+ * preceding separation-enforcing gate (the high_risk_requires_gate rule) — the
+ * processor who triaged a case provably cannot be the one who starts its clock
+ * or files it. An SoD constraint binds the two roles. Assumes seedRecon ran
+ * first (notify@1).
  */
 async function seedPv(pool: Pool): Promise<void> {
   const seeded = await pool.query("SELECT 1 FROM flows WHERE name = 'pv-icsr-processing'");
@@ -472,12 +487,13 @@ async function seedPv(pool: Pool): Promise<void> {
 
   // The processor role carries an enforced per-run cap on case-intake. The
   // demo invokes it once per run, so the cap proves limits are present
-  // without ever tripping.
+  // without ever tripping. The physician role carries no limits — it only
+  // owns the binding seriousness/expectedness call at the gate.
   await pool.query(
     `INSERT INTO roles (name, description, limits) VALUES
-     ('pv-case-processor-role', 'Processes ICSRs: intakes cases, triages seriousness/expectedness, drafts narratives',
+     ('pv-processor-role', 'Processes ICSRs: intakes cases, proposes seriousness/expectedness, drafts narratives, transmits the reviewer-confirmed E2B(R3) reports',
       '{"skills":{"case-intake@1":{"maxInvocationsPerRun":2}}}'),
-     ('medical-reviewer-role', 'Medical reviewer: confirms seriousness and expectedness for expedited cases', '{}')
+     ('pv-physician-role', 'Medical reviewer / physician: confirms seriousness and expectedness before any case starts the 15-day expedited clock or is transmitted', '{}')
      ON CONFLICT (name) DO NOTHING`,
   );
 
@@ -486,7 +502,7 @@ async function seedPv(pool: Pool): Promise<void> {
      SELECT least(p.id, m.id), greatest(p.id, m.id),
             'the processor who triages a case may not perform its medical review'
        FROM roles p, roles m
-      WHERE p.name = 'pv-case-processor-role' AND m.name = 'medical-reviewer-role'
+      WHERE p.name = 'pv-processor-role' AND m.name = 'pv-physician-role'
         AND NOT EXISTS (
           SELECT 1 FROM sod_constraints sc
            WHERE sc.role_a_id = least(p.id, m.id) AND sc.role_b_id = greatest(p.id, m.id))`,
@@ -494,34 +510,57 @@ async function seedPv(pool: Pool): Promise<void> {
 
   await pool.query(
     `INSERT INTO agents (name, description, role_id, model_config)
-     SELECT 'pv-case-processor', 'PV case processor: intakes and triages adverse-event cases, drafts ICSR narratives',
+     SELECT 'pv-case-processor', 'PV case processor: intakes and triages adverse-event cases, drafts ICSR narratives, transmits the reviewer-confirmed E2B(R3) reports',
             r.id, '{}'::jsonb
-       FROM roles r WHERE r.name = 'pv-case-processor-role'
+       FROM roles r WHERE r.name = 'pv-processor-role'
      ON CONFLICT (name) DO NOTHING`,
   );
 
-  const skills: Array<[string, string]> = [
-    ["case-intake", "Read the day's adverse-event case queue from the ICSR CSV file."],
+  // case-intake and case-triage are LOW: ingest and an advisory pre-gate
+  // proposal. seriousness-assess and e2b-submit are HIGH: the binding
+  // determination that starts the 15-day clock and the one-way E2B(R3)
+  // transmission. The high tier is exactly what makes the flow grammar demand
+  // a preceding separation gate. notify@1 was seeded by seedRecon.
+  const skills: Array<[string, string, "low" | "high"]> = [
+    ["case-intake", "Read the day's adverse-event case queue from the ICSR CSV file.", "low"],
     [
-      "seriousness-triage",
-      "Rule-based triage: serious AND unexpected cases go onto the 15-day expedited clock (21 CFR 314.80), with a rationale per case; the rest route to periodic reporting.",
+      "case-triage",
+      "Advisory pre-gate proposal: surface the cases that look serious AND unexpected (candidate 15-day expedited, 21 CFR 314.80) with a rationale per case; the rest are proposed for periodic reporting. Carries no regulatory weight.",
+      "low",
     ],
-    ["narrative-draft", "Draft an ICSR narrative for each expedited case."],
+    [
+      "seriousness-assess",
+      "Make the BINDING serious-and-unexpected determination over the medically-reviewed cases and START the 15-day expedited clock (21 CFR 314.80). HIGH risk: it structurally requires a preceding approval gate.",
+      "high",
+    ],
+    ["narrative-draft", "Draft a cited ICSR narrative for each confirmed expedited case.", "low"],
+    [
+      "e2b-submit",
+      "Transmit each confirmed ICSR to the regulatory gateway in E2B(R3) format — the irreversible, one-way filing. HIGH risk: it structurally requires a preceding approval gate.",
+      "high",
+    ],
   ];
-  for (const [name, description] of skills) {
+  for (const [name, description, riskTier] of skills) {
     await pool.query(
       `INSERT INTO skills (name, version, description, input_schema, output_schema, implementation, risk_tier)
-       VALUES ($1, 1, $2, '{}', '{}', '{"type":"local"}', 'low') ON CONFLICT DO NOTHING`,
-      [name, description],
+       VALUES ($1, 1, $2, '{}', '{}', '{"type":"local"}', $3) ON CONFLICT DO NOTHING`,
+      [name, description, riskTier],
     );
   }
 
-  const grants = ["case-intake", "seriousness-triage", "narrative-draft", "notify"];
+  const grants = [
+    "case-intake",
+    "case-triage",
+    "seriousness-assess",
+    "narrative-draft",
+    "e2b-submit",
+    "notify",
+  ];
   for (const skillName of grants) {
     await pool.query(
       `INSERT INTO role_skill_grants (role_id, skill_id)
        SELECT r.id, s.id FROM roles r, skills s
-        WHERE r.name = 'pv-case-processor-role' AND s.name = $1 AND s.version = 1
+        WHERE r.name = 'pv-processor-role' AND s.name = $1 AND s.version = 1
           AND NOT EXISTS (
             SELECT 1 FROM role_skill_grants g
              WHERE g.role_id = r.id AND g.skill_id = s.id AND g.revoked_at IS NULL)`,
@@ -537,9 +576,9 @@ async function seedPv(pool: Pool): Promise<void> {
         {
           key: "intake_triage",
           agent: "pv-case-processor",
-          skills: ["case-intake@1", "seriousness-triage@1"],
+          skills: ["case-intake@1", "case-triage@1"],
           instructions:
-            "Intake the day's adverse-event cases and propose seriousness/expectedness per case: serious and unexpected cases go onto the 15-day expedited clock with a rationale.",
+            "Intake the day's adverse-event cases and PROPOSE seriousness/expectedness per case: surface the serious-and-unexpected cases as candidates for the 15-day expedited clock with a rationale. This is advisory only — the binding call is the medical reviewer's at the gate.",
           retries: { max_attempts: 3, backoff: "exponential" },
           timeout_ms: 120_000,
         },
@@ -552,9 +591,9 @@ async function seedPv(pool: Pool): Promise<void> {
         {
           key: "submit",
           agent: "pv-case-processor",
-          skills: ["narrative-draft@1", "notify@1"],
+          skills: ["seriousness-assess@1", "narrative-draft@1", "e2b-submit@1", "notify@1"],
           instructions:
-            "Draft the ICSR narratives for the reviewer-confirmed expedited cases and notify the PV channel.",
+            "On the reviewer-confirmed cases: make the binding serious-and-unexpected determination and start the 15-day expedited clock, draft the cited ICSR narratives, transmit them to the regulatory gateway in E2B(R3) format, and notify the PV channel.",
           timeout_ms: 120_000,
         },
       ],
@@ -791,6 +830,141 @@ async function seedColdChain(pool: Pool): Promise<void> {
           skills: ["disposition-act@1", "notify@1"],
           instructions:
             "Execute the QA-decided disposition: release the within-spec lots, destroy the beyond-spec lots, leave borderline lots held for QA judgment, and notify the cold-chain channel.",
+          timeout_ms: 120_000,
+        },
+      ],
+    },
+  });
+}
+
+/**
+ * GMP Environmental-Monitoring Excursion Disposition: the same safe/consequential
+ * ASYMMETRY as cold-chain, re-skinned from a temperature excursion to a microbial
+ * (CFU) excursion in a GMP cleanroom. An aseptic fill line throws an EM excursion:
+ * viable-air sampling records microbial counts climbing past the validated action
+ * limit while a batch is on the line. An EM-monitor agent ingests the excursion
+ * record, the validated alert/action limits, and the sampling time-series, assesses
+ * the affected batch (within / beyond / borderline), and QUARANTINES it ITSELF —
+ * holding is the SAFE direction, so it is allowed and recorded but needs no gate.
+ * The one-way door — release the batch to market vs reject (destroy) it, six figures
+ * either way — is owned by a named quality-unit person at the disposition_decision
+ * gate. batch-disposition@1 is risk_tier 'high', so the flow grammar structurally
+ * forces an approval gate before the step that uses it (the high_risk_requires_gate
+ * rule). An SoD constraint binds the two roles: the monitor who assesses an
+ * excursion may not own its final batch disposition — the structural expression of
+ * 21 CFR 211.22 quality-unit independence (a named signature AND executor !=
+ * approver). Assumes seedRecon ran first (notify@1).
+ */
+async function seedEm(pool: Pool): Promise<void> {
+  const seeded = await pool.query(
+    "SELECT 1 FROM flows WHERE name = 'gmp-em-excursion-disposition'",
+  );
+  if (seeded.rows.length > 0) return;
+
+  // The monitor role carries an enforced, NON-TRIGGERING per-run cap on em-ingest.
+  // The demo invokes it once per run, so the cap proves limits are present without
+  // ever tripping. The QA-disposition role carries no limits — it only owns the
+  // one-way batch decision at the gate.
+  await pool.query(
+    `INSERT INTO roles (name, description, limits) VALUES
+     ('em-analyst-role', 'Monitors EM/GMP excursions: ingests cleanroom monitoring data, assesses against alert/action limits, quarantines affected batches, executes the QA-approved disposition',
+      '{"skills":{"em-ingest@1":{"maxInvocationsPerRun":2}}}'),
+     ('qa-disposition-role', 'Quality unit: owns the one-way release-or-reject disposition of excursion-affected batches (21 CFR 211.22)', '{}')
+     ON CONFLICT (name) DO NOTHING`,
+  );
+
+  await pool.query(
+    `INSERT INTO sod_constraints (role_a_id, role_b_id, description)
+     SELECT least(an.id, q.id), greatest(an.id, q.id),
+            'the analyst who assesses an EM excursion may not own its final batch disposition'
+       FROM roles an, roles q
+      WHERE an.name = 'em-analyst-role' AND q.name = 'qa-disposition-role'
+        AND NOT EXISTS (
+          SELECT 1 FROM sod_constraints sc
+           WHERE sc.role_a_id = least(an.id, q.id) AND sc.role_b_id = greatest(an.id, q.id))`,
+  );
+
+  await pool.query(
+    `INSERT INTO agents (name, description, role_id, model_config)
+     SELECT 'em-monitor', 'EM monitor: ingests cleanroom excursions, assesses against alert/action limits, quarantines affected batches, executes the QA-approved disposition',
+            r.id, '{}'::jsonb
+       FROM roles r WHERE r.name = 'em-analyst-role'
+     ON CONFLICT (name) DO NOTHING`,
+  );
+
+  // batch-disposition@1 is HIGH risk: it walks the one-way door (release/reject).
+  // The high tier is exactly what makes the flow grammar demand a preceding gate.
+  // The other three are low risk: ingest, assess, and quarantine are all
+  // safe-direction or read-only. notify@1 was seeded by seedRecon.
+  const skills: Array<[string, string, "low" | "high"]> = [
+    [
+      "em-ingest",
+      "Read the EM excursion record, the validated alert/action limits, and the viable-air sampling time-series, joining the affected batch to the limits for its product.",
+      "low",
+    ],
+    [
+      "excursion-assess",
+      "Assess the affected batch against its validated alert/action limits: within (releasable), beyond (reject), or borderline (the human-judgment moment); output the assessed batch with rationale, an EM excursion report, and recommended disposition, plus a hold list.",
+      "low",
+    ],
+    [
+      "batch-quarantine",
+      "Mark the affected batch held — the safe direction; the agent may do this without a gate.",
+      "low",
+    ],
+    [
+      "batch-disposition",
+      "Execute the one-way release-or-reject decision per batch. HIGH risk: it structurally requires a preceding approval gate.",
+      "high",
+    ],
+  ];
+  for (const [name, description, riskTier] of skills) {
+    await pool.query(
+      `INSERT INTO skills (name, version, description, input_schema, output_schema, implementation, risk_tier)
+       VALUES ($1, 1, $2, '{}', '{}', '{"type":"local"}', $3) ON CONFLICT DO NOTHING`,
+      [name, description, riskTier],
+    );
+  }
+
+  const grants = ["em-ingest", "excursion-assess", "batch-quarantine", "batch-disposition", "notify"];
+  for (const skillName of grants) {
+    await pool.query(
+      `INSERT INTO role_skill_grants (role_id, skill_id)
+       SELECT r.id, s.id FROM roles r, skills s
+        WHERE r.name = 'em-analyst-role' AND s.name = $1 AND s.version = 1
+          AND NOT EXISTS (
+            SELECT 1 FROM role_skill_grants g
+             WHERE g.role_id = r.id AND g.skill_id = s.id AND g.revoked_at IS NULL)`,
+      [skillName],
+    );
+  }
+
+  await publishFlowVersion(pool, {
+    actor: SEED_ACTOR,
+    definition: {
+      name: "gmp-em-excursion-disposition",
+      steps: [
+        {
+          key: "assess",
+          agent: "em-monitor",
+          skills: ["em-ingest@1", "excursion-assess@1", "batch-quarantine@1"],
+          instructions:
+            "Ingest the EM excursion record, the validated alert/action limits, and the viable-air sampling time-series, assess the affected batch (within / beyond / borderline) with a rationale, an EM excursion report, and a recommended disposition, and quarantine the affected batch — holding is the safe direction and needs no gate.",
+          retries: { max_attempts: 3, backoff: "exponential" },
+          timeout_ms: 120_000,
+        },
+        {
+          key: "disposition_decision",
+          type: "approval_gate",
+          title: "Batch disposition — QA release or reject",
+          approvals: { min_approvals: 1, forbid_requester: true },
+        },
+        {
+          key: "act",
+          agent: "em-monitor",
+          skills: ["batch-disposition@1", "notify@1"],
+          instructions:
+            "Execute the QA-decided disposition: release the within-spec batch, reject the beyond-spec batch, leave a borderline batch held for QA judgment, and notify the EM/QA channel.",
           timeout_ms: 120_000,
         },
       ],
