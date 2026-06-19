@@ -422,20 +422,26 @@ export const caseIntake: LocalSkillFn = async (input) => {
   return { cases };
 };
 
+/** The 15-day expedited clock string stamped on every expedited ICSR. */
+const PV_EXPEDITED_CLOCK = "15-day expedited (21 CFR 314.80)";
+
 /**
- * Rule-based seriousness/expectedness triage: serious AND unexpected goes onto
- * the 15-day expedited clock (21 CFR 314.80) regardless of source country;
- * everything else routes to periodic reporting. The agent only PROPOSES — the
- * medical reviewer confirms seriousness and expectedness at the gate.
+ * Rule-based PV case triage: serious AND unexpected PROPOSES the 15-day
+ * expedited clock (21 CFR 314.80) regardless of source country; everything
+ * else PROPOSES periodic reporting. This runs BEFORE the gate, so it is
+ * advisory only and carries no regulatory weight: the agent merely surfaces
+ * which cases look expedited. The binding determination is seriousness-assess,
+ * which runs only AFTER the medical reviewer signs off at the medical_review
+ * gate. Low risk — it proposes, it does not decide.
  */
-export const seriousnessTriage: LocalSkillFn = async (input) => {
+export const caseTriage: LocalSkillFn = async (input) => {
   const cases = (input.cases ?? []) as IcsrRow[];
-  const expedited: Json[] = [];
-  const periodic: Json[] = [];
+  const proposedExpedited: Json[] = [];
+  const proposedPeriodic: Json[] = [];
 
   for (const c of cases) {
     if (c.seriousness === "serious" && c.expectedness === "unexpected") {
-      expedited.push({
+      proposedExpedited.push({
         caseId: c.case_id,
         drug: c.drug,
         event: c.event,
@@ -443,18 +449,24 @@ export const seriousnessTriage: LocalSkillFn = async (input) => {
         expectedness: c.expectedness,
         country: c.country,
         receivedDate: c.received_date,
-        clock: "15-day expedited (21 CFR 314.80)",
+        clock: PV_EXPEDITED_CLOCK,
         rationale:
-          `serious and unexpected — 15-day expedited report ("Alert report") under ` +
-          `21 CFR 314.80, regardless of source (received from ${c.country} on ` +
-          `${c.received_date})`,
+          `serious and unexpected — proposed for a 15-day expedited report ("Alert ` +
+          `report") under 21 CFR 314.80, regardless of source (received from ` +
+          `${c.country} on ${c.received_date}); pending medical-reviewer confirmation`,
       });
     } else {
-      periodic.push({
+      proposedPeriodic.push({
         caseId: c.case_id,
+        drug: c.drug,
+        event: c.event,
+        seriousness: c.seriousness,
+        expectedness: c.expectedness,
+        country: c.country,
+        receivedDate: c.received_date,
         rationale:
           `seriousness "${c.seriousness}", expectedness "${c.expectedness}" — does ` +
-          "not meet the serious-and-unexpected test of 21 CFR 314.80; route to " +
+          "not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for " +
           "periodic reporting",
       });
     }
@@ -462,13 +474,115 @@ export const seriousnessTriage: LocalSkillFn = async (input) => {
 
   return {
     caseCount: cases.length,
-    expeditedCount: expedited.length,
-    expedited,
+    expeditedCount: proposedExpedited.length,
+    // Names mirror the post-gate seriousness-assess output so the demo and its
+    // assertions read the same fields before and after the gate.
+    expedited: proposedExpedited,
+    periodic: proposedPeriodic,
+  };
+};
+
+interface PvProposalRow {
+  caseId: string;
+  drug: string;
+  event: string;
+  seriousness: string;
+  expectedness: string;
+  country: string;
+  receivedDate: string;
+  clock?: string;
+  rationale: string;
+}
+
+/**
+ * The BINDING seriousness/expectedness determination — HIGH risk. This runs
+ * only AFTER the medical reviewer confirms at the medical_review gate, so the
+ * 15-day regulatory clock (21 CFR 314.80) starts on a human-confirmed call, not
+ * on the agent's proposal. It re-derives the serious-AND-unexpected test over
+ * the medically-reviewed cases and stamps the authoritative expedited clock per
+ * case. Because it is high-risk, the flow grammar structurally forces a
+ * preceding separation-enforcing gate (the high_risk_requires_gate rule), so
+ * the processor who triaged the case can never be the one who starts its clock.
+ */
+export const seriousnessAssess: LocalSkillFn = async (input) => {
+  // Prefer the triage proposal carried forward; fall back to the raw cases so
+  // the skill is well-defined even if invoked directly.
+  const proposed = (input.expedited ?? null) as PvProposalRow[] | null;
+  const periodicIn = (input.periodic ?? []) as Array<{ caseId: string; rationale: string }>;
+  const rawCases = (input.cases ?? []) as IcsrRow[];
+
+  const confirmed: Json[] = [];
+  // Carry the pre-gate periodic proposals forward, normalised to {caseId,
+  // rationale} so they share the post-gate periodic shape.
+  const periodic: Json[] = periodicIn.map((c) => ({
+    caseId: c.caseId,
+    rationale: c.rationale,
+  }));
+
+  const assessRow = (
+    caseId: string,
+    drug: string,
+    event: string,
+    seriousness: string,
+    expectedness: string,
+    country: string,
+    receivedDate: string,
+  ): void => {
+    if (seriousness === "serious" && expectedness === "unexpected") {
+      confirmed.push({
+        caseId,
+        drug,
+        event,
+        seriousness,
+        expectedness,
+        country,
+        receivedDate,
+        clock: PV_EXPEDITED_CLOCK,
+        rationale:
+          `CONFIRMED serious and unexpected by the medical reviewer — the 15-day ` +
+          `expedited clock under 21 CFR 314.80 starts now, regardless of source ` +
+          `(received from ${country} on ${receivedDate})`,
+      });
+    } else {
+      periodic.push({
+        caseId,
+        rationale:
+          `seriousness "${seriousness}", expectedness "${expectedness}" — does not ` +
+          "meet the serious-and-unexpected test of 21 CFR 314.80; route to periodic " +
+          "reporting",
+      });
+    }
+  };
+
+  if (proposed) {
+    for (const c of proposed) {
+      assessRow(c.caseId, c.drug, c.event, c.seriousness, c.expectedness, c.country, c.receivedDate);
+    }
+  } else {
+    for (const c of rawCases) {
+      assessRow(
+        c.case_id,
+        c.drug,
+        c.event,
+        c.seriousness,
+        c.expectedness,
+        c.country,
+        c.received_date,
+      );
+    }
+  }
+
+  return {
+    caseCount: confirmed.length + periodic.length,
+    expeditedCount: confirmed.length,
+    // `expedited` is the medically-confirmed expedited set; narrative-draft and
+    // e2b-submit consume it downstream.
+    expedited: confirmed,
     periodic,
   };
 };
 
-/** Drafts an ICSR narrative per expedited case (runs only after the gate). */
+/** Drafts a cited ICSR narrative per confirmed expedited case (post-gate). */
 export const narrativeDraft: LocalSkillFn = async (input) => {
   const expedited = (input.expedited ?? []) as Array<{
     caseId: string;
@@ -483,16 +597,51 @@ export const narrativeDraft: LocalSkillFn = async (input) => {
     drug: c.drug,
     narrative:
       `ICSR narrative for ${c.caseId} (${c.drug}): ${c.event}, source ${c.country}. ` +
-      `Triage rationale: ${c.rationale}. Clock: ${c.clock}. Seriousness and ` +
-      "expectedness confirmed by the medical reviewer at the medical_review gate; " +
-      "transmit in E2B(R3) format.",
+      `Assessment: ${c.rationale}. Clock: ${c.clock}. Seriousness and expectedness ` +
+      "confirmed by the medical reviewer at the medical_review gate; transmit in " +
+      "E2B(R3) format per ICH E2B(R3) / 21 CFR 314.80.",
   }));
   return {
     icsrCount: narratives.length,
     narratives,
+  };
+};
+
+/**
+ * Transmits each confirmed ICSR to the regulatory gateway in E2B(R3) format —
+ * HIGH risk. This is the irreversible, one-way act: once an Individual Case
+ * Safety Report leaves for FDA FAERS / EMA EudraVigilance it cannot be
+ * un-submitted, and a missed 15-day deadline is a reportable compliance breach.
+ * It runs only AFTER the medical_review gate, so the run's requester can never
+ * be the one who files. Emits a delivery acknowledgement per case plus the
+ * notification-ready channel/message so notify@1 runs directly downstream.
+ */
+export const e2bSubmit: LocalSkillFn = async (input) => {
+  const narratives = (input.narratives ?? []) as Array<{ caseId: string; drug: string }>;
+  const expedited = (input.expedited ?? []) as Array<{
+    caseId: string;
+    clock: string;
+  }>;
+  const clockByCase = new Map(expedited.map((c) => [c.caseId, c.clock]));
+
+  const submissions = narratives.map((n) => ({
+    caseId: n.caseId,
+    drug: n.drug,
+    format: "E2B(R3)",
+    destination: "regulatory gateway (FDA FAERS / EMA EudraVigilance)",
+    clock: clockByCase.get(n.caseId) ?? PV_EXPEDITED_CLOCK,
+    acknowledgement: `ICSR-ACK-${n.caseId}`,
+    submitted: true,
+  }));
+
+  return {
+    submittedCount: submissions.length,
+    submissions,
     // Notification-ready fields so notify@1 can run directly downstream.
     channel: "#pv",
-    message: `ICSR processing complete: ${narratives.length} expedited narrative(s) drafted for medical-reviewer-confirmed cases.`,
+    message:
+      `ICSR processing complete: ${submissions.length} expedited E2B(R3) report(s) ` +
+      "transmitted to the regulatory gateway for medical-reviewer-confirmed cases.",
   };
 };
 
@@ -1026,6 +1175,358 @@ export const dispositionAct: LocalSkillFn = async (input) => {
   };
 };
 
+// ── GMP environmental-monitoring excursion (cold-chain re-skin) ──────────────
+//
+// Structurally identical to the cold-chain disposition cast, re-skinned from a
+// temperature excursion to a microbial (CFU) excursion in a GMP cleanroom. The
+// monitor agent ingests the excursion, assesses the affected batch against its
+// validated alert/action limits, and quarantines it itself (safe direction,
+// ungated); the one-way release-or-reject call is a HIGH-risk skill the engine
+// forces behind a named quality-unit gate (21 CFR 211.22 independence).
+
+interface EmExcursionRow {
+  batch_id: string;
+  product: string;
+  room: string;
+  units: number;
+  value_usd: number;
+}
+
+interface EmLimitRow {
+  product: string;
+  action_limit_cfu: number;
+  max_excursion_minutes: number;
+}
+
+interface EmJoinedBatch extends EmExcursionRow {
+  action_limit_cfu: number | null;
+  max_excursion_minutes: number | null;
+}
+
+/**
+ * Reads the single EM-excursion record, the validated alert/action limits, and
+ * the viable-air sampling time-series (CFU per minute). The incident is joined to
+ * the limits for its product; a product with no validated EM profile cannot be
+ * assessed against a known action limit, so actionLimitCfu/maxExcursionMinutes are
+ * carried as null and assessed as borderline downstream (fail safe: an unknown
+ * limit is never silently releasable).
+ */
+export const emIngest: LocalSkillFn = async (input) => {
+  // Mirrors excursion-ingest: an explicit path wins; under docker compose the
+  // EM fixtures are siblings of DEMO_DATA_DIR in the examples dir.
+  const dataDir = process.env.DEMO_DATA_DIR;
+  const excursionsPath = String(
+    input.excursionsPath ??
+      (dataDir ? join(dataDir, "..", "gmp-em-excursion", "excursions.csv") : ""),
+  );
+  const limitsPath = String(
+    input.limitsPath ?? (dataDir ? join(dataDir, "..", "gmp-em-excursion", "em_limits.csv") : ""),
+  );
+  const readingsPath = String(
+    input.readingsPath ??
+      (dataDir ? join(dataDir, "..", "gmp-em-excursion", "em_readings.csv") : ""),
+  );
+  if (!excursionsPath || !limitsPath || !readingsPath) {
+    throw new Error(
+      "em-ingest requires excursionsPath, limitsPath and readingsPath (or DEMO_DATA_DIR)",
+    );
+  }
+
+  // A single incident row: the affected batch, its product, room, and value.
+  const excursions: EmExcursionRow[] = parseCsv(
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is caller-controlled but confined to the bundled demo data tree by assertWithinDemoRoot (path-traversal guard).
+    await readFile(assertWithinDemoRoot(excursionsPath), "utf8"),
+  ).map((r) => ({
+    batch_id: r.batch_id!,
+    product: r.product!,
+    room: r.room!,
+    units: Number(r.units),
+    value_usd: Number(r.value_usd),
+  }));
+  const limits: EmLimitRow[] = parseCsv(
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is caller-controlled but confined to the bundled demo data tree by assertWithinDemoRoot (path-traversal guard).
+    await readFile(assertWithinDemoRoot(limitsPath), "utf8"),
+  ).map((r) => ({
+    product: r.product!,
+    action_limit_cfu: Number(r.action_limit_cfu),
+    max_excursion_minutes: Number(r.max_excursion_minutes),
+  }));
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is caller-controlled but confined to the bundled demo data tree by assertWithinDemoRoot (path-traversal guard).
+  const readingRows = parseCsv(await readFile(assertWithinDemoRoot(readingsPath), "utf8")).map(
+    (r) => ({
+      minute: Number(r.minute),
+      cfu: Number(r.cfu),
+    }),
+  );
+
+  const incidentRow = excursions[0];
+  const limit = incidentRow ? limits.find((l) => l.product === incidentRow.product) : undefined;
+
+  const joined: EmJoinedBatch = {
+    batch_id: incidentRow?.batch_id ?? "",
+    product: incidentRow?.product ?? "",
+    room: incidentRow?.room ?? "",
+    units: incidentRow?.units ?? 0,
+    value_usd: incidentRow?.value_usd ?? 0,
+    // A null limit means "no validated profile" — propagated, never defaulted.
+    action_limit_cfu: limit ? limit.action_limit_cfu : null,
+    max_excursion_minutes: limit ? limit.max_excursion_minutes : null,
+  };
+
+  const intervalMinutes =
+    readingRows.length >= 2 ? readingRows[1]!.minute - readingRows[0]!.minute : 30;
+
+  return {
+    incident: {
+      batch: joined.batch_id,
+      product: joined.product,
+      room: joined.room,
+      units: joined.units,
+      valueUsd: joined.value_usd,
+    },
+    actionLimitCfu: joined.action_limit_cfu,
+    maxExcursionMinutes: joined.max_excursion_minutes,
+    intervalMinutes,
+    readings: readingRows,
+  };
+};
+
+interface EmIncidentIn {
+  batch?: string;
+  product?: string;
+  room?: string;
+  units?: number;
+  valueUsd?: number;
+}
+
+interface EmReadingIn {
+  minute: number;
+  cfu: number;
+}
+
+/**
+ * Single-incident EM-excursion assessment versus the validated alert/action
+ * limits.
+ *
+ *  - beyond / reject: the viable-air peak exceeds the action limit AND the
+ *    cumulative time at or above the limit exceeds the validated excursion
+ *    allowance — the batch is out of its contamination-control specification.
+ *  - within / release: the peak never reaches the action limit.
+ *  - borderline / escalate: over the limit but inside the validated allowance, or
+ *    a product with no validated EM profile (fail safe) — the human-judgment
+ *    moment for the quality unit.
+ *
+ * The agent only RECOMMENDS and builds the excursion report. The release-or-reject
+ * decision is a one-way door owned by QA at the disposition_decision gate
+ * (21 CFR 211.22). batch-quarantine@1 adds held/heldUnits/holdList afterwards.
+ */
+export const excursionAssess: LocalSkillFn = async (input) => {
+  const incident = (input.incident ?? {}) as EmIncidentIn;
+  const readings = (input.readings ?? []) as EmReadingIn[];
+  const actionLimitRaw = input.actionLimitCfu;
+  const maxExcursionMinutesRaw = input.maxExcursionMinutes;
+  const intervalMinutes = Number(input.intervalMinutes ?? 30);
+
+  const hasLimit =
+    typeof actionLimitRaw === "number" &&
+    Number.isFinite(actionLimitRaw) &&
+    typeof maxExcursionMinutesRaw === "number" &&
+    Number.isFinite(maxExcursionMinutesRaw);
+  const actionLimitCfu = hasLimit ? (actionLimitRaw as number) : null;
+  const maxExcursionMinutes = hasLimit ? (maxExcursionMinutesRaw as number) : null;
+
+  const peakCfu = readings.reduce((max, r) => (r.cfu > max ? r.cfu : max), 0);
+  // Time over limit = number of readings at or above the limit * interval. With
+  // no validated limit there is nothing to count against, so it is 0.
+  const readingsOverLimit =
+    actionLimitCfu === null ? 0 : readings.filter((r) => r.cfu >= actionLimitCfu).length;
+  const minutesOverLimit = readingsOverLimit * intervalMinutes;
+
+  // Classify per the contract.
+  let classification: "within" | "beyond" | "borderline";
+  let recommendedDisposition: "release" | "reject" | "escalate";
+  if (actionLimitCfu === null || maxExcursionMinutes === null) {
+    classification = "borderline";
+    recommendedDisposition = "escalate";
+  } else if (peakCfu <= actionLimitCfu) {
+    classification = "within";
+    recommendedDisposition = "release";
+  } else if (peakCfu > actionLimitCfu && minutesOverLimit > maxExcursionMinutes) {
+    classification = "beyond";
+    recommendedDisposition = "reject";
+  } else {
+    classification = "borderline";
+    recommendedDisposition = "escalate";
+  }
+
+  const report = buildEmReport({
+    incident,
+    actionLimitCfu,
+    maxExcursionMinutes,
+    peakCfu,
+    minutesOverLimit,
+    classification,
+    recommendedDisposition,
+  });
+
+  return {
+    incident,
+    actionLimitCfu,
+    maxExcursionMinutes,
+    intervalMinutes,
+    readings,
+    peakCfu,
+    minutesOverLimit,
+    classification,
+    recommendedDisposition,
+    holdList: incident.batch ? [incident.batch] : [],
+    report,
+  };
+};
+
+const EM_REPORT_REF = "EMIR-2026-0731";
+
+/**
+ * Builds the Environmental Monitoring Excursion Report dynamically from the
+ * assessed numbers: three body paragraphs (para1 cites [1], para2 cites [2] and
+ * [3], para3 carries the 21 CFR 211.22 quality-unit one-way-door sentence with no
+ * citation) and three footnotes. The recommendation clause adapts to the
+ * classification.
+ */
+function buildEmReport(args: {
+  incident: EmIncidentIn;
+  actionLimitCfu: number | null;
+  maxExcursionMinutes: number | null;
+  peakCfu: number;
+  minutesOverLimit: number;
+  classification: "within" | "beyond" | "borderline";
+  recommendedDisposition: "release" | "reject" | "escalate";
+}): Json {
+  const { incident, actionLimitCfu, maxExcursionMinutes, peakCfu, minutesOverLimit, classification } =
+    args;
+  const product = incident.product ?? "the product";
+  const batch = incident.batch ?? "the batch";
+  const room = incident.room ?? "the cleanroom";
+  const units = Number(incident.units ?? 0);
+  const unitsStr = units.toLocaleString("en-US");
+  const limitStr =
+    actionLimitCfu === null ? "the validated" : `the validated ${actionLimitCfu} CFU`;
+
+  const para1 =
+    `An environmental-monitoring excursion was detected in room ${room} during fill of ${product} ` +
+    `(batch ${batch}, ${unitsStr} units). Viable-air sampling recorded a peak of ${peakCfu} CFU ` +
+    `against ${limitStr} action limit, with counts at or above the limit for ${minutesOverLimit} ` +
+    `minutes [1].`;
+
+  // The recommendation clause adapts to the classification.
+  let para2: string;
+  if (classification === "beyond") {
+    para2 =
+      `Against the validated contamination-control limits, cumulative time at or above the action ` +
+      `limit (${minutesOverLimit} minutes) exceeds the validated ${maxExcursionMinutes}-minute ` +
+      `excursion allowance, which bears directly on sterility assurance [2]. The batch is beyond ` +
+      `its validated EM specification and is recommended for rejection [3].`;
+  } else if (classification === "within") {
+    para2 =
+      `Against the validated contamination-control limits, the peak of ${peakCfu} CFU stayed within ` +
+      `the action limit and cumulative time at or above it (${minutesOverLimit} minutes) is within ` +
+      `the validated ${maxExcursionMinutes}-minute excursion allowance, which bears directly on ` +
+      `sterility assurance [2]. The batch is within its validated EM specification and is ` +
+      `recommended for release [3].`;
+  } else {
+    const allowanceClause =
+      maxExcursionMinutes === null
+        ? `no validated excursion allowance exists for this product`
+        : `cumulative time at or above the limit (${minutesOverLimit} minutes) is within the ` +
+          `validated ${maxExcursionMinutes}-minute excursion allowance`;
+    para2 =
+      `Against the validated contamination-control limits, ${allowanceClause}, which bears directly ` +
+      `on sterility assurance [2]. The batch is at the boundary of its validated EM specification ` +
+      `and is recommended for escalation to the quality unit [3].`;
+  }
+
+  const para3 =
+    "Quarantine has been placed on the batch. Disposition is a one-way door and must be " +
+    "decided by the independent quality unit (21 CFR 211.22) — it is not the agent's to make.";
+
+  return {
+    title: "Environmental Monitoring Excursion Report",
+    ref: EM_REPORT_REF,
+    body: [para1, para2, para3],
+    footnotes: [
+      "Viable-air trace EM-7731-2026.csv",
+      `Contamination Control Strategy CCS-2024-031 — ${product} (EU GMP Annex 1)`,
+      "SOP QA-021 — EM Excursion Investigation & Batch Disposition",
+    ],
+  };
+}
+
+/**
+ * LOW-risk: marks the incident batch held. Holding is the SAFE direction — the
+ * agent may quarantine without a gate, because a held batch is neither released
+ * nor rejected; the costly, irreversible decision is still owned by QA. The
+ * asymmetry in one skill: the agent is free to move toward safety. The output is
+ * the full contract object, with held/heldUnits/holdList added.
+ */
+export const batchQuarantine: LocalSkillFn = async (input) => {
+  const incident = (input.incident ?? {}) as EmIncidentIn;
+  return {
+    ...input,
+    held: true,
+    heldUnits: incident.units ?? 0,
+    holdList: incident.batch ? [incident.batch] : [],
+  };
+};
+
+/**
+ * HIGH-risk: executes the one-way disposition for the single incident — RELEASE a
+ * within-spec batch, REJECT a beyond-spec batch, or leave a borderline batch held
+ * for QA judgment — following the recommendation carried out of excursion-assess.
+ * Because this skill is risk_tier 'high', the flow grammar structurally forces an
+ * approval gate before the step that uses it.
+ */
+export const batchDisposition: LocalSkillFn = async (input) => {
+  const incident = (input.incident ?? {}) as EmIncidentIn;
+  const recommendedDisposition = String(input.recommendedDisposition ?? "escalate");
+
+  const batchEntry = {
+    batchId: incident.batch ?? "",
+    units: Number(incident.units ?? 0),
+    valueUsd: Number(incident.valueUsd ?? 0),
+  };
+
+  const released: Json[] = [];
+  const rejected: Json[] = [];
+  const heldForJudgment: Json[] = [];
+  if (recommendedDisposition === "release") {
+    released.push(batchEntry);
+  } else if (recommendedDisposition === "reject") {
+    rejected.push(batchEntry);
+  } else {
+    heldForJudgment.push(batchEntry);
+  }
+
+  const releasedValue = round2(released.reduce((s, r) => s + (Number(r.valueUsd) || 0), 0));
+  const rejectedValue = round2(rejected.reduce((s, r) => s + (Number(r.valueUsd) || 0), 0));
+
+  return {
+    releasedCount: released.length,
+    rejectedCount: rejected.length,
+    heldForJudgmentCount: heldForJudgment.length,
+    releasedValue,
+    rejectedValue,
+    released,
+    rejected,
+    heldForJudgment,
+    // Notification-ready fields so notify@1 can run directly downstream.
+    channel: "#em-qa",
+    message:
+      `EM excursion disposition executed at QA decision: ${released.length} batch(es) released ` +
+      `(${releasedValue.toFixed(2)}), ${rejected.length} rejected ` +
+      `(${rejectedValue.toFixed(2)}), ${heldForJudgment.length} held for QA judgment.`,
+  };
+};
+
 export function demoLocalRegistry(): Map<string, LocalSkillFn> {
   return new Map<string, LocalSkillFn>([
     ["csv-ingest@1", csvIngest],
@@ -1039,8 +1540,10 @@ export function demoLocalRegistry(): Map<string, LocalSkillFn> {
     ["reportability-triage@1", reportabilityTriage],
     ["mdr-draft@1", mdrDraft],
     ["case-intake@1", caseIntake],
-    ["seriousness-triage@1", seriousnessTriage],
+    ["case-triage@1", caseTriage],
+    ["seriousness-assess@1", seriousnessAssess],
     ["narrative-draft@1", narrativeDraft],
+    ["e2b-submit@1", e2bSubmit],
     ["erp-extract@1", erpExtract],
     ["gtn-waterfall@1", gtnWaterfall],
     ["accrual-draft@1", accrualDraft],
@@ -1048,5 +1551,9 @@ export function demoLocalRegistry(): Map<string, LocalSkillFn> {
     ["stability-assess@1", stabilityAssess],
     ["quarantine@1", quarantine],
     ["disposition-act@1", dispositionAct],
+    ["em-ingest@1", emIngest],
+    ["excursion-assess@1", excursionAssess],
+    ["batch-quarantine@1", batchQuarantine],
+    ["batch-disposition@1", batchDisposition],
   ]);
 }

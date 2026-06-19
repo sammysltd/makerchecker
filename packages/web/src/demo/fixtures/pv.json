@@ -1,0 +1,2327 @@
+{
+  "meta": {
+    "flow": "pv-icsr-processing",
+    "note": "Captured from a real seeded run (auth enabled). Do not hand-edit; regenerate with CAPTURE_WRITE=1."
+  },
+  "actors": {
+    "analyst": {
+      "name": "Demo Admin",
+      "email": "admin@makerchecker.local"
+    },
+    "officer": {
+      "name": "Demo Approving Officer",
+      "email": "officer@makerchecker.local"
+    }
+  },
+  "scenes": {
+    "running": {
+      "run": {
+        "id": "ebb90679-9953-42d2-aa42-23da6b2b5233",
+        "flow": "pv-icsr-processing",
+        "version": 1,
+        "definition": {
+          "name": "pv-icsr-processing",
+          "steps": [
+            {
+              "key": "intake_triage",
+              "agent": "pv-case-processor",
+              "skills": [
+                "case-intake@1",
+                "case-triage@1"
+              ],
+              "retries": {
+                "backoff": "exponential",
+                "max_attempts": 3
+              },
+              "timeout_ms": 120000,
+              "instructions": "Intake the day's adverse-event cases and PROPOSE seriousness/expectedness per case: surface the serious-and-unexpected cases as candidates for the 15-day expedited clock with a rationale. This is advisory only — the binding call is the medical reviewer's at the gate."
+            },
+            {
+              "key": "medical_review",
+              "type": "approval_gate",
+              "title": "Medical review — seriousness and expectedness confirmation",
+              "approvals": {
+                "min_approvals": 1,
+                "forbid_requester": true
+              }
+            },
+            {
+              "key": "submit",
+              "agent": "pv-case-processor",
+              "skills": [
+                "seriousness-assess@1",
+                "narrative-draft@1",
+                "e2b-submit@1",
+                "notify@1"
+              ],
+              "timeout_ms": 120000,
+              "instructions": "On the reviewer-confirmed cases: make the binding serious-and-unexpected determination and start the 15-day expedited clock, draft the cited ICSR narratives, transmit them to the regulatory gateway in E2B(R3) format, and notify the PV channel."
+            }
+          ]
+        },
+        "status": "running",
+        "failure_reason": null,
+        "input": {
+          "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+        },
+        "triggered_by": {
+          "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+          "name": "admin@makerchecker.local",
+          "type": "user"
+        },
+        "created_at": "2026-06-19T16:09:17.947Z",
+        "started_at": "2026-06-19T16:09:17.961Z",
+        "finished_at": null
+      },
+      "steps": [
+        {
+          "id": "2f6443fb-675a-48ca-b13f-bc394845a21d",
+          "step_index": 0,
+          "step_key": "intake_triage",
+          "status": "running",
+          "attempt": 1,
+          "input": {
+            "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+          },
+          "output": null,
+          "error": null,
+          "agent": "pv-case-processor",
+          "started_at": "2026-06-19T16:09:17.961Z",
+          "finished_at": null
+        }
+      ],
+      "approvals": [],
+      "auditEvents": [
+        {
+          "seq": "14",
+          "occurred_at": "2026-06-19T16:09:17.948Z",
+          "actor": {
+            "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "run.created",
+          "payload": {
+            "input": {
+              "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+            },
+            "flowVersionId": "bb29cb02-bb5c-41a0-a4ac-0f422a455266"
+          },
+          "hash": "6de254054eef0981f9b4f394af1e908da4bd70f4bdb8796fe3b0b186563d6fd5"
+        },
+        {
+          "seq": "15",
+          "occurred_at": "2026-06-19T16:09:17.969Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "case-intake@1",
+              "case-triage@1"
+            ],
+            "attempt": 1,
+            "stepKey": "intake_triage",
+            "stepIndex": 0
+          },
+          "hash": "0e1f016627b79769ff580aabf13f7231fc7c89c81e8c636133634bbdf57e5241"
+        },
+        {
+          "seq": "16",
+          "occurred_at": "2026-06-19T16:09:17.989Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+            },
+            "output": {
+              "cases": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "case_id": "P-4001",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "case_id": "P-4002",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Acute liver failure",
+                  "case_id": "P-4003",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "case_id": "P-4004",
+                  "country": "GB",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "case_id": "P-4005",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "case_id": "P-4006",
+                  "country": "FR",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "case_id": "P-4007",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "case_id": "P-4008",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Anaphylactic reaction",
+                  "case_id": "P-4009",
+                  "country": "DE",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-05"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "case_id": "P-4010",
+                  "country": "CA",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-05"
+                }
+              ]
+            },
+            "stepKey": "intake_triage",
+            "skillRef": "case-intake@1"
+          },
+          "hash": "0edee868cdf256d9d20ab82f366152a4ba90794a227fd3d03c305d8eb15f3d1f"
+        }
+      ]
+    },
+    "waiting": {
+      "run": {
+        "id": "ebb90679-9953-42d2-aa42-23da6b2b5233",
+        "flow": "pv-icsr-processing",
+        "version": 1,
+        "definition": {
+          "name": "pv-icsr-processing",
+          "steps": [
+            {
+              "key": "intake_triage",
+              "agent": "pv-case-processor",
+              "skills": [
+                "case-intake@1",
+                "case-triage@1"
+              ],
+              "retries": {
+                "backoff": "exponential",
+                "max_attempts": 3
+              },
+              "timeout_ms": 120000,
+              "instructions": "Intake the day's adverse-event cases and PROPOSE seriousness/expectedness per case: surface the serious-and-unexpected cases as candidates for the 15-day expedited clock with a rationale. This is advisory only — the binding call is the medical reviewer's at the gate."
+            },
+            {
+              "key": "medical_review",
+              "type": "approval_gate",
+              "title": "Medical review — seriousness and expectedness confirmation",
+              "approvals": {
+                "min_approvals": 1,
+                "forbid_requester": true
+              }
+            },
+            {
+              "key": "submit",
+              "agent": "pv-case-processor",
+              "skills": [
+                "seriousness-assess@1",
+                "narrative-draft@1",
+                "e2b-submit@1",
+                "notify@1"
+              ],
+              "timeout_ms": 120000,
+              "instructions": "On the reviewer-confirmed cases: make the binding serious-and-unexpected determination and start the 15-day expedited clock, draft the cited ICSR narratives, transmit them to the regulatory gateway in E2B(R3) format, and notify the PV channel."
+            }
+          ]
+        },
+        "status": "waiting_approval",
+        "failure_reason": null,
+        "input": {
+          "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+        },
+        "triggered_by": {
+          "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+          "name": "admin@makerchecker.local",
+          "type": "user"
+        },
+        "created_at": "2026-06-19T16:09:17.947Z",
+        "started_at": "2026-06-19T16:09:17.961Z",
+        "finished_at": null
+      },
+      "steps": [
+        {
+          "id": "2f6443fb-675a-48ca-b13f-bc394845a21d",
+          "step_index": 0,
+          "step_key": "intake_triage",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+          },
+          "output": {
+            "periodic": [
+              {
+                "drug": "Cardevol 10mg",
+                "event": "Mild headache",
+                "caseId": "P-4001",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-01"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Dizziness",
+                "caseId": "P-4002",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-01"
+              },
+              {
+                "drug": "Pulmofen inhaler",
+                "event": "Throat irritation",
+                "caseId": "P-4004",
+                "country": "GB",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-02"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Seizure",
+                "caseId": "P-4005",
+                "country": "US",
+                "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-03"
+              },
+              {
+                "drug": "Gastrelin 40mg",
+                "event": "Nausea",
+                "caseId": "P-4006",
+                "country": "FR",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-03"
+              },
+              {
+                "drug": "Cardevol 10mg",
+                "event": "Rash",
+                "caseId": "P-4007",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-04"
+              },
+              {
+                "drug": "Pulmofen inhaler",
+                "event": "Mild cough",
+                "caseId": "P-4008",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-04"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Fatigue",
+                "caseId": "P-4010",
+                "country": "CA",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-05"
+              }
+            ],
+            "caseCount": 10,
+            "expedited": [
+              {
+                "drug": "Cardevol 10mg",
+                "clock": "15-day expedited (21 CFR 314.80)",
+                "event": "Acute liver failure",
+                "caseId": "P-4003",
+                "country": "US",
+                "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                "seriousness": "serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-02"
+              },
+              {
+                "drug": "Gastrelin 40mg",
+                "clock": "15-day expedited (21 CFR 314.80)",
+                "event": "Anaphylactic reaction",
+                "caseId": "P-4009",
+                "country": "DE",
+                "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                "seriousness": "serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-05"
+              }
+            ],
+            "expeditedCount": 2
+          },
+          "error": null,
+          "agent": "pv-case-processor",
+          "started_at": "2026-06-19T16:09:17.961Z",
+          "finished_at": "2026-06-19T16:09:17.992Z"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "98bb7101-bd68-47ac-a8f8-ebabf9b0d5e0",
+          "step_key": "medical_review",
+          "status": "pending",
+          "requested_at": "2026-06-19T16:09:18.001Z",
+          "decided_at": null,
+          "reason": null,
+          "required_approvals": 1,
+          "decided_by": null,
+          "decisions": []
+        }
+      ],
+      "auditEvents": [
+        {
+          "seq": "14",
+          "occurred_at": "2026-06-19T16:09:17.948Z",
+          "actor": {
+            "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "run.created",
+          "payload": {
+            "input": {
+              "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+            },
+            "flowVersionId": "bb29cb02-bb5c-41a0-a4ac-0f422a455266"
+          },
+          "hash": "6de254054eef0981f9b4f394af1e908da4bd70f4bdb8796fe3b0b186563d6fd5"
+        },
+        {
+          "seq": "15",
+          "occurred_at": "2026-06-19T16:09:17.969Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "case-intake@1",
+              "case-triage@1"
+            ],
+            "attempt": 1,
+            "stepKey": "intake_triage",
+            "stepIndex": 0
+          },
+          "hash": "0e1f016627b79769ff580aabf13f7231fc7c89c81e8c636133634bbdf57e5241"
+        },
+        {
+          "seq": "16",
+          "occurred_at": "2026-06-19T16:09:17.989Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+            },
+            "output": {
+              "cases": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "case_id": "P-4001",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "case_id": "P-4002",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Acute liver failure",
+                  "case_id": "P-4003",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "case_id": "P-4004",
+                  "country": "GB",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "case_id": "P-4005",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "case_id": "P-4006",
+                  "country": "FR",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "case_id": "P-4007",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "case_id": "P-4008",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Anaphylactic reaction",
+                  "case_id": "P-4009",
+                  "country": "DE",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-05"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "case_id": "P-4010",
+                  "country": "CA",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-05"
+                }
+              ]
+            },
+            "stepKey": "intake_triage",
+            "skillRef": "case-intake@1"
+          },
+          "hash": "0edee868cdf256d9d20ab82f366152a4ba90794a227fd3d03c305d8eb15f3d1f"
+        },
+        {
+          "seq": "17",
+          "occurred_at": "2026-06-19T16:09:17.991Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "cases": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "case_id": "P-4001",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "case_id": "P-4002",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Acute liver failure",
+                  "case_id": "P-4003",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "case_id": "P-4004",
+                  "country": "GB",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "case_id": "P-4005",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "case_id": "P-4006",
+                  "country": "FR",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "case_id": "P-4007",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "case_id": "P-4008",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Anaphylactic reaction",
+                  "case_id": "P-4009",
+                  "country": "DE",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-05"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "case_id": "P-4010",
+                  "country": "CA",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-05"
+                }
+              ]
+            },
+            "output": {
+              "periodic": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "caseId": "P-4001",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "caseId": "P-4002",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "caseId": "P-4004",
+                  "country": "GB",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "caseId": "P-4005",
+                  "country": "US",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "caseId": "P-4006",
+                  "country": "FR",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "caseId": "P-4007",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "caseId": "P-4008",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "caseId": "P-4010",
+                  "country": "CA",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "stepKey": "intake_triage",
+            "skillRef": "case-triage@1"
+          },
+          "hash": "647fc64cdf68fb09c8ff76a7a28f07b0e130ddff50ded765a3492bae6c41328c"
+        },
+        {
+          "seq": "18",
+          "occurred_at": "2026-06-19T16:09:17.993Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "periodic": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "caseId": "P-4001",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "caseId": "P-4002",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "caseId": "P-4004",
+                  "country": "GB",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "caseId": "P-4005",
+                  "country": "US",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "caseId": "P-4006",
+                  "country": "FR",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "caseId": "P-4007",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "caseId": "P-4008",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "caseId": "P-4010",
+                  "country": "CA",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "attempt": 1,
+            "stepKey": "intake_triage"
+          },
+          "hash": "403731ae6eba6ab67232610366cb2d2c0bebe2a5fcab064b5b26306a2225dbf6"
+        },
+        {
+          "seq": "19",
+          "occurred_at": "2026-06-19T16:09:18.003Z",
+          "actor": {
+            "id": "engine",
+            "type": "system"
+          },
+          "event_type": "approval.requested",
+          "payload": {
+            "title": "Medical review — seriousness and expectedness confirmation",
+            "stepKey": "medical_review",
+            "stepIndex": 1,
+            "requiredApprovals": 1
+          },
+          "hash": "8848342c0ba7dabf8c54929300b8efb05b42c557b5f4c1e6ea0c91633dd23531"
+        }
+      ]
+    },
+    "completed": {
+      "run": {
+        "id": "ebb90679-9953-42d2-aa42-23da6b2b5233",
+        "flow": "pv-icsr-processing",
+        "version": 1,
+        "definition": {
+          "name": "pv-icsr-processing",
+          "steps": [
+            {
+              "key": "intake_triage",
+              "agent": "pv-case-processor",
+              "skills": [
+                "case-intake@1",
+                "case-triage@1"
+              ],
+              "retries": {
+                "backoff": "exponential",
+                "max_attempts": 3
+              },
+              "timeout_ms": 120000,
+              "instructions": "Intake the day's adverse-event cases and PROPOSE seriousness/expectedness per case: surface the serious-and-unexpected cases as candidates for the 15-day expedited clock with a rationale. This is advisory only — the binding call is the medical reviewer's at the gate."
+            },
+            {
+              "key": "medical_review",
+              "type": "approval_gate",
+              "title": "Medical review — seriousness and expectedness confirmation",
+              "approvals": {
+                "min_approvals": 1,
+                "forbid_requester": true
+              }
+            },
+            {
+              "key": "submit",
+              "agent": "pv-case-processor",
+              "skills": [
+                "seriousness-assess@1",
+                "narrative-draft@1",
+                "e2b-submit@1",
+                "notify@1"
+              ],
+              "timeout_ms": 120000,
+              "instructions": "On the reviewer-confirmed cases: make the binding serious-and-unexpected determination and start the 15-day expedited clock, draft the cited ICSR narratives, transmit them to the regulatory gateway in E2B(R3) format, and notify the PV channel."
+            }
+          ]
+        },
+        "status": "completed",
+        "failure_reason": null,
+        "input": {
+          "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+        },
+        "triggered_by": {
+          "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+          "name": "admin@makerchecker.local",
+          "type": "user"
+        },
+        "created_at": "2026-06-19T16:09:17.947Z",
+        "started_at": "2026-06-19T16:09:17.961Z",
+        "finished_at": "2026-06-19T16:09:18.118Z"
+      },
+      "steps": [
+        {
+          "id": "2f6443fb-675a-48ca-b13f-bc394845a21d",
+          "step_index": 0,
+          "step_key": "intake_triage",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+          },
+          "output": {
+            "periodic": [
+              {
+                "drug": "Cardevol 10mg",
+                "event": "Mild headache",
+                "caseId": "P-4001",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-01"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Dizziness",
+                "caseId": "P-4002",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-01"
+              },
+              {
+                "drug": "Pulmofen inhaler",
+                "event": "Throat irritation",
+                "caseId": "P-4004",
+                "country": "GB",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-02"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Seizure",
+                "caseId": "P-4005",
+                "country": "US",
+                "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-03"
+              },
+              {
+                "drug": "Gastrelin 40mg",
+                "event": "Nausea",
+                "caseId": "P-4006",
+                "country": "FR",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-03"
+              },
+              {
+                "drug": "Cardevol 10mg",
+                "event": "Rash",
+                "caseId": "P-4007",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-04"
+              },
+              {
+                "drug": "Pulmofen inhaler",
+                "event": "Mild cough",
+                "caseId": "P-4008",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-04"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Fatigue",
+                "caseId": "P-4010",
+                "country": "CA",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-05"
+              }
+            ],
+            "caseCount": 10,
+            "expedited": [
+              {
+                "drug": "Cardevol 10mg",
+                "clock": "15-day expedited (21 CFR 314.80)",
+                "event": "Acute liver failure",
+                "caseId": "P-4003",
+                "country": "US",
+                "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                "seriousness": "serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-02"
+              },
+              {
+                "drug": "Gastrelin 40mg",
+                "clock": "15-day expedited (21 CFR 314.80)",
+                "event": "Anaphylactic reaction",
+                "caseId": "P-4009",
+                "country": "DE",
+                "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                "seriousness": "serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-05"
+              }
+            ],
+            "expeditedCount": 2
+          },
+          "error": null,
+          "agent": "pv-case-processor",
+          "started_at": "2026-06-19T16:09:17.961Z",
+          "finished_at": "2026-06-19T16:09:17.992Z"
+        },
+        {
+          "id": "dc301c00-63aa-442b-8b0e-f10e1eb227e6",
+          "step_index": 2,
+          "step_key": "submit",
+          "status": "completed",
+          "attempt": 1,
+          "input": {
+            "periodic": [
+              {
+                "drug": "Cardevol 10mg",
+                "event": "Mild headache",
+                "caseId": "P-4001",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-01"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Dizziness",
+                "caseId": "P-4002",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-01"
+              },
+              {
+                "drug": "Pulmofen inhaler",
+                "event": "Throat irritation",
+                "caseId": "P-4004",
+                "country": "GB",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-02"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Seizure",
+                "caseId": "P-4005",
+                "country": "US",
+                "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-03"
+              },
+              {
+                "drug": "Gastrelin 40mg",
+                "event": "Nausea",
+                "caseId": "P-4006",
+                "country": "FR",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-03"
+              },
+              {
+                "drug": "Cardevol 10mg",
+                "event": "Rash",
+                "caseId": "P-4007",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-04"
+              },
+              {
+                "drug": "Pulmofen inhaler",
+                "event": "Mild cough",
+                "caseId": "P-4008",
+                "country": "US",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-04"
+              },
+              {
+                "drug": "Neurastat 25mg",
+                "event": "Fatigue",
+                "caseId": "P-4010",
+                "country": "CA",
+                "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                "seriousness": "non-serious",
+                "expectedness": "expected",
+                "receivedDate": "2026-06-05"
+              }
+            ],
+            "caseCount": 10,
+            "expedited": [
+              {
+                "drug": "Cardevol 10mg",
+                "clock": "15-day expedited (21 CFR 314.80)",
+                "event": "Acute liver failure",
+                "caseId": "P-4003",
+                "country": "US",
+                "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                "seriousness": "serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-02"
+              },
+              {
+                "drug": "Gastrelin 40mg",
+                "clock": "15-day expedited (21 CFR 314.80)",
+                "event": "Anaphylactic reaction",
+                "caseId": "P-4009",
+                "country": "DE",
+                "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                "seriousness": "serious",
+                "expectedness": "unexpected",
+                "receivedDate": "2026-06-05"
+              }
+            ],
+            "expeditedCount": 2
+          },
+          "output": {
+            "channel": "#pv",
+            "message": "ICSR processing complete: 2 expedited E2B(R3) report(s) transmitted to the regulatory gateway for medical-reviewer-confirmed cases.",
+            "delivered": true,
+            "deliveredAt": "2026-06-19T16:09:18.113Z"
+          },
+          "error": null,
+          "agent": "pv-case-processor",
+          "started_at": "2026-06-19T16:09:18.016Z",
+          "finished_at": "2026-06-19T16:09:18.115Z"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "98bb7101-bd68-47ac-a8f8-ebabf9b0d5e0",
+          "step_key": "medical_review",
+          "status": "approved",
+          "requested_at": "2026-06-19T16:09:18.001Z",
+          "decided_at": "2026-06-19T16:09:18.012Z",
+          "reason": "P-4003 (Cardevol, acute liver failure) and P-4009 (Gastrelin, anaphylaxis) are serious and unexpected; file 15-day expedited ICSRs per 21 CFR 314.80.",
+          "required_approvals": 1,
+          "decided_by": "officer@makerchecker.local",
+          "decisions": [
+            {
+              "id": "1f27fae2-d7ae-423e-9917-194590840cb1",
+              "decision": "approved",
+              "reason": "P-4003 (Cardevol, acute liver failure) and P-4009 (Gastrelin, anaphylaxis) are serious and unexpected; file 15-day expedited ICSRs per 21 CFR 314.80.",
+              "created_at": "2026-06-19T16:09:18.012Z",
+              "decided_by": "officer@makerchecker.local"
+            }
+          ]
+        }
+      ],
+      "auditEvents": [
+        {
+          "seq": "14",
+          "occurred_at": "2026-06-19T16:09:17.948Z",
+          "actor": {
+            "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "run.created",
+          "payload": {
+            "input": {
+              "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+            },
+            "flowVersionId": "bb29cb02-bb5c-41a0-a4ac-0f422a455266"
+          },
+          "hash": "6de254054eef0981f9b4f394af1e908da4bd70f4bdb8796fe3b0b186563d6fd5"
+        },
+        {
+          "seq": "15",
+          "occurred_at": "2026-06-19T16:09:17.969Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "case-intake@1",
+              "case-triage@1"
+            ],
+            "attempt": 1,
+            "stepKey": "intake_triage",
+            "stepIndex": 0
+          },
+          "hash": "0e1f016627b79769ff580aabf13f7231fc7c89c81e8c636133634bbdf57e5241"
+        },
+        {
+          "seq": "16",
+          "occurred_at": "2026-06-19T16:09:17.989Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "casesPath": "examples/pv-icsr-processing/icsr_cases.csv"
+            },
+            "output": {
+              "cases": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "case_id": "P-4001",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "case_id": "P-4002",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Acute liver failure",
+                  "case_id": "P-4003",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "case_id": "P-4004",
+                  "country": "GB",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "case_id": "P-4005",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "case_id": "P-4006",
+                  "country": "FR",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "case_id": "P-4007",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "case_id": "P-4008",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Anaphylactic reaction",
+                  "case_id": "P-4009",
+                  "country": "DE",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-05"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "case_id": "P-4010",
+                  "country": "CA",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-05"
+                }
+              ]
+            },
+            "stepKey": "intake_triage",
+            "skillRef": "case-intake@1"
+          },
+          "hash": "0edee868cdf256d9d20ab82f366152a4ba90794a227fd3d03c305d8eb15f3d1f"
+        },
+        {
+          "seq": "17",
+          "occurred_at": "2026-06-19T16:09:17.991Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "cases": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "case_id": "P-4001",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "case_id": "P-4002",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-01"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Acute liver failure",
+                  "case_id": "P-4003",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "case_id": "P-4004",
+                  "country": "GB",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "case_id": "P-4005",
+                  "country": "US",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "case_id": "P-4006",
+                  "country": "FR",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "case_id": "P-4007",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "case_id": "P-4008",
+                  "country": "US",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-04"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Anaphylactic reaction",
+                  "case_id": "P-4009",
+                  "country": "DE",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "received_date": "2026-06-05"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "case_id": "P-4010",
+                  "country": "CA",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "received_date": "2026-06-05"
+                }
+              ]
+            },
+            "output": {
+              "periodic": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "caseId": "P-4001",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "caseId": "P-4002",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "caseId": "P-4004",
+                  "country": "GB",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "caseId": "P-4005",
+                  "country": "US",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "caseId": "P-4006",
+                  "country": "FR",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "caseId": "P-4007",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "caseId": "P-4008",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "caseId": "P-4010",
+                  "country": "CA",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "stepKey": "intake_triage",
+            "skillRef": "case-triage@1"
+          },
+          "hash": "647fc64cdf68fb09c8ff76a7a28f07b0e130ddff50ded765a3492bae6c41328c"
+        },
+        {
+          "seq": "18",
+          "occurred_at": "2026-06-19T16:09:17.993Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "periodic": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "caseId": "P-4001",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "caseId": "P-4002",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "caseId": "P-4004",
+                  "country": "GB",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "caseId": "P-4005",
+                  "country": "US",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "caseId": "P-4006",
+                  "country": "FR",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "caseId": "P-4007",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "caseId": "P-4008",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "caseId": "P-4010",
+                  "country": "CA",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "attempt": 1,
+            "stepKey": "intake_triage"
+          },
+          "hash": "403731ae6eba6ab67232610366cb2d2c0bebe2a5fcab064b5b26306a2225dbf6"
+        },
+        {
+          "seq": "19",
+          "occurred_at": "2026-06-19T16:09:18.003Z",
+          "actor": {
+            "id": "engine",
+            "type": "system"
+          },
+          "event_type": "approval.requested",
+          "payload": {
+            "title": "Medical review — seriousness and expectedness confirmation",
+            "stepKey": "medical_review",
+            "stepIndex": 1,
+            "requiredApprovals": 1
+          },
+          "hash": "8848342c0ba7dabf8c54929300b8efb05b42c557b5f4c1e6ea0c91633dd23531"
+        },
+        {
+          "seq": "20",
+          "occurred_at": "2026-06-19T16:09:18.010Z",
+          "actor": {
+            "id": "e5e18f23-b105-44d0-b35e-7fc02a041325",
+            "name": "admin@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "approval.decision_denied",
+          "payload": {
+            "code": "requester_forbidden",
+            "reason": "the user who triggered this run cannot decide gate \"medical_review\" (forbid_requester)",
+            "stepKey": "medical_review",
+            "attemptedDecision": "approved"
+          },
+          "hash": "ecf2ced40e6844a7c391e04a91ce2a5335d667bc6c12aa8932ef46ccc3fcdcbd"
+        },
+        {
+          "seq": "21",
+          "occurred_at": "2026-06-19T16:09:18.013Z",
+          "actor": {
+            "id": "1b6a1ad5-e91e-406e-acdb-25aefe458b2a",
+            "name": "officer@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "approval.decided",
+          "payload": {
+            "reason": "P-4003 (Cardevol, acute liver failure) and P-4009 (Gastrelin, anaphylaxis) are serious and unexpected; file 15-day expedited ICSRs per 21 CFR 314.80.",
+            "stepKey": "medical_review",
+            "decision": "approved",
+            "approvedCount": 1,
+            "rejectedCount": 0,
+            "requiredApprovals": 1
+          },
+          "hash": "e721d4eef7f12dacb76d9f46f37164932647c32a60002b5d612b6461f496f49b"
+        },
+        {
+          "seq": "22",
+          "occurred_at": "2026-06-19T16:09:18.014Z",
+          "actor": {
+            "id": "1b6a1ad5-e91e-406e-acdb-25aefe458b2a",
+            "name": "officer@makerchecker.local",
+            "type": "user"
+          },
+          "event_type": "approval.resolved",
+          "payload": {
+            "outcome": "approved",
+            "stepKey": "medical_review",
+            "approvedCount": 1,
+            "rejectedCount": 0,
+            "requiredApprovals": 1
+          },
+          "hash": "4ca1314563fbf7e5720d132c24ae8e5b9990455a191648d602632c9699eb7985"
+        },
+        {
+          "seq": "23",
+          "occurred_at": "2026-06-19T16:09:18.024Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.started",
+          "payload": {
+            "skills": [
+              "seriousness-assess@1",
+              "narrative-draft@1",
+              "e2b-submit@1",
+              "notify@1"
+            ],
+            "attempt": 1,
+            "stepKey": "submit",
+            "stepIndex": 2
+          },
+          "hash": "b7b87f432822a5491657af35d5dd7ca9abce25f269564e8f58486e654e62f7a5"
+        },
+        {
+          "seq": "24",
+          "occurred_at": "2026-06-19T16:09:18.036Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "periodic": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Mild headache",
+                  "caseId": "P-4001",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Dizziness",
+                  "caseId": "P-4002",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-01"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Throat irritation",
+                  "caseId": "P-4004",
+                  "country": "GB",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Seizure",
+                  "caseId": "P-4005",
+                  "country": "US",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "event": "Nausea",
+                  "caseId": "P-4006",
+                  "country": "FR",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-03"
+                },
+                {
+                  "drug": "Cardevol 10mg",
+                  "event": "Rash",
+                  "caseId": "P-4007",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Pulmofen inhaler",
+                  "event": "Mild cough",
+                  "caseId": "P-4008",
+                  "country": "US",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-04"
+                },
+                {
+                  "drug": "Neurastat 25mg",
+                  "event": "Fatigue",
+                  "caseId": "P-4010",
+                  "country": "CA",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting",
+                  "seriousness": "non-serious",
+                  "expectedness": "expected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from US on 2026-06-02); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "serious and unexpected — proposed for a 15-day expedited report (\"Alert report\") under 21 CFR 314.80, regardless of source (received from DE on 2026-06-05); pending medical-reviewer confirmation",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "output": {
+              "periodic": [
+                {
+                  "caseId": "P-4001",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4002",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4004",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4005",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4006",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4007",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4008",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4010",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from US on 2026-06-02)",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from DE on 2026-06-05)",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "stepKey": "submit",
+            "skillRef": "seriousness-assess@1"
+          },
+          "hash": "fe121caf96bc721e2b5c29c9a6b70a465bb265d37fb724f55051d15adf862313"
+        },
+        {
+          "seq": "25",
+          "occurred_at": "2026-06-19T16:09:18.038Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "periodic": [
+                {
+                  "caseId": "P-4001",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4002",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4004",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4005",
+                  "rationale": "seriousness \"serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4006",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4007",
+                  "rationale": "seriousness \"non-serious\", expectedness \"unexpected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4008",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                },
+                {
+                  "caseId": "P-4010",
+                  "rationale": "seriousness \"non-serious\", expectedness \"expected\" — does not meet the serious-and-unexpected test of 21 CFR 314.80; proposed for periodic reporting"
+                }
+              ],
+              "caseCount": 10,
+              "expedited": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Acute liver failure",
+                  "caseId": "P-4003",
+                  "country": "US",
+                  "rationale": "CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from US on 2026-06-02)",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-02"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "event": "Anaphylactic reaction",
+                  "caseId": "P-4009",
+                  "country": "DE",
+                  "rationale": "CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from DE on 2026-06-05)",
+                  "seriousness": "serious",
+                  "expectedness": "unexpected",
+                  "receivedDate": "2026-06-05"
+                }
+              ],
+              "expeditedCount": 2
+            },
+            "output": {
+              "icsrCount": 2,
+              "narratives": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "caseId": "P-4003",
+                  "narrative": "ICSR narrative for P-4003 (Cardevol 10mg): Acute liver failure, source US. Assessment: CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from US on 2026-06-02). Clock: 15-day expedited (21 CFR 314.80). Seriousness and expectedness confirmed by the medical reviewer at the medical_review gate; transmit in E2B(R3) format per ICH E2B(R3) / 21 CFR 314.80."
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "caseId": "P-4009",
+                  "narrative": "ICSR narrative for P-4009 (Gastrelin 40mg): Anaphylactic reaction, source DE. Assessment: CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from DE on 2026-06-05). Clock: 15-day expedited (21 CFR 314.80). Seriousness and expectedness confirmed by the medical reviewer at the medical_review gate; transmit in E2B(R3) format per ICH E2B(R3) / 21 CFR 314.80."
+                }
+              ]
+            },
+            "stepKey": "submit",
+            "skillRef": "narrative-draft@1"
+          },
+          "hash": "8640e0b834ad97bf172c942d3a8fd66b9e35de3460e056e50ef29c9cba841689"
+        },
+        {
+          "seq": "26",
+          "occurred_at": "2026-06-19T16:09:18.039Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "icsrCount": 2,
+              "narratives": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "caseId": "P-4003",
+                  "narrative": "ICSR narrative for P-4003 (Cardevol 10mg): Acute liver failure, source US. Assessment: CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from US on 2026-06-02). Clock: 15-day expedited (21 CFR 314.80). Seriousness and expectedness confirmed by the medical reviewer at the medical_review gate; transmit in E2B(R3) format per ICH E2B(R3) / 21 CFR 314.80."
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "caseId": "P-4009",
+                  "narrative": "ICSR narrative for P-4009 (Gastrelin 40mg): Anaphylactic reaction, source DE. Assessment: CONFIRMED serious and unexpected by the medical reviewer — the 15-day expedited clock under 21 CFR 314.80 starts now, regardless of source (received from DE on 2026-06-05). Clock: 15-day expedited (21 CFR 314.80). Seriousness and expectedness confirmed by the medical reviewer at the medical_review gate; transmit in E2B(R3) format per ICH E2B(R3) / 21 CFR 314.80."
+                }
+              ]
+            },
+            "output": {
+              "channel": "#pv",
+              "message": "ICSR processing complete: 2 expedited E2B(R3) report(s) transmitted to the regulatory gateway for medical-reviewer-confirmed cases.",
+              "submissions": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "caseId": "P-4003",
+                  "format": "E2B(R3)",
+                  "submitted": true,
+                  "destination": "regulatory gateway (FDA FAERS / EMA EudraVigilance)",
+                  "acknowledgement": "ICSR-ACK-P-4003"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "caseId": "P-4009",
+                  "format": "E2B(R3)",
+                  "submitted": true,
+                  "destination": "regulatory gateway (FDA FAERS / EMA EudraVigilance)",
+                  "acknowledgement": "ICSR-ACK-P-4009"
+                }
+              ],
+              "submittedCount": 2
+            },
+            "stepKey": "submit",
+            "skillRef": "e2b-submit@1"
+          },
+          "hash": "041a6d611371f6d7d9e58dc5d39ebfa85415d560e8555e17061f12f8441b60a8"
+        },
+        {
+          "seq": "27",
+          "occurred_at": "2026-06-19T16:09:18.115Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "skill.invoked",
+          "payload": {
+            "input": {
+              "channel": "#pv",
+              "message": "ICSR processing complete: 2 expedited E2B(R3) report(s) transmitted to the regulatory gateway for medical-reviewer-confirmed cases.",
+              "submissions": [
+                {
+                  "drug": "Cardevol 10mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "caseId": "P-4003",
+                  "format": "E2B(R3)",
+                  "submitted": true,
+                  "destination": "regulatory gateway (FDA FAERS / EMA EudraVigilance)",
+                  "acknowledgement": "ICSR-ACK-P-4003"
+                },
+                {
+                  "drug": "Gastrelin 40mg",
+                  "clock": "15-day expedited (21 CFR 314.80)",
+                  "caseId": "P-4009",
+                  "format": "E2B(R3)",
+                  "submitted": true,
+                  "destination": "regulatory gateway (FDA FAERS / EMA EudraVigilance)",
+                  "acknowledgement": "ICSR-ACK-P-4009"
+                }
+              ],
+              "submittedCount": 2
+            },
+            "output": {
+              "channel": "#pv",
+              "message": "ICSR processing complete: 2 expedited E2B(R3) report(s) transmitted to the regulatory gateway for medical-reviewer-confirmed cases.",
+              "delivered": true,
+              "deliveredAt": "2026-06-19T16:09:18.113Z"
+            },
+            "stepKey": "submit",
+            "skillRef": "notify@1"
+          },
+          "hash": "814fa83ea5d81b86b25d0fa1bf395a67184b2a7c53ea224f2695a2115c3cd1c1"
+        },
+        {
+          "seq": "28",
+          "occurred_at": "2026-06-19T16:09:18.116Z",
+          "actor": {
+            "id": "b85372e6-e234-41b0-a3d9-a5c3a6e4ebe8",
+            "name": "pv-case-processor",
+            "type": "agent"
+          },
+          "event_type": "run.step.completed",
+          "payload": {
+            "output": {
+              "channel": "#pv",
+              "message": "ICSR processing complete: 2 expedited E2B(R3) report(s) transmitted to the regulatory gateway for medical-reviewer-confirmed cases.",
+              "delivered": true,
+              "deliveredAt": "2026-06-19T16:09:18.113Z"
+            },
+            "attempt": 1,
+            "stepKey": "submit"
+          },
+          "hash": "4f99dd00bdcbbec2739c6e69ce73555b4b66b062bd505c210cf1bb8fdd134885"
+        },
+        {
+          "seq": "29",
+          "occurred_at": "2026-06-19T16:09:18.118Z",
+          "actor": {
+            "id": "engine",
+            "type": "system"
+          },
+          "event_type": "run.completed",
+          "payload": {},
+          "hash": "addefe6811d9bc7ad6fc3859ccbad94d09fb583249d8289374f537e1ebf888ea"
+        }
+      ]
+    }
+  },
+  "approval": {
+    "id": "98bb7101-bd68-47ac-a8f8-ebabf9b0d5e0",
+    "run_id": "ebb90679-9953-42d2-aa42-23da6b2b5233",
+    "step_key": "medical_review",
+    "requested_at": "2026-06-19T16:09:18.001Z",
+    "required_approvals": 1,
+    "approved_count": 0,
+    "age_seconds": 0,
+    "overdue": false,
+    "flow": "pv-icsr-processing"
+  },
+  "blockedDecision": {
+    "status": 403,
+    "message": "the user who triggered this run cannot decide gate \"medical_review\" (forbid_requester)"
+  },
+  "approvedDecision": {
+    "status": 200
+  },
+  "verify": {
+    "ok": true,
+    "count": 29,
+    "headHash": "addefe6811d9bc7ad6fc3859ccbad94d09fb583249d8289374f537e1ebf888ea"
+  },
+  "runsList": {
+    "runs": [
+      {
+        "id": "ebb90679-9953-42d2-aa42-23da6b2b5233",
+        "flow": "pv-icsr-processing",
+        "version": 1,
+        "status": "completed",
+        "failure_reason": null,
+        "created_at": "2026-06-19T16:09:17.947Z",
+        "started_at": "2026-06-19T16:09:17.961Z",
+        "finished_at": "2026-06-19T16:09:18.118Z"
+      }
+    ]
+  }
+}

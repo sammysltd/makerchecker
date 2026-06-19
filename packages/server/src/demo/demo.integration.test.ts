@@ -35,6 +35,10 @@ const COLD_CHAIN_EXAMPLES = join(
   dirname(fileURLToPath(import.meta.url)),
   "../../../../examples/cold-chain-disposition",
 );
+const EM_EXAMPLES = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../examples/gmp-em-excursion",
+);
 
 let db: TestDb;
 let ctx: EngineContext;
@@ -658,10 +662,23 @@ describe("pv-icsr-processing — the medicines demo, end to end via the API", ()
 
   it("the processor role carries an enforced intake cap the demo stays under", async () => {
     const { rows } = await db.pool.query<{ limits: Record<string, unknown> }>(
-      "SELECT limits FROM roles WHERE name = 'pv-case-processor-role'",
+      "SELECT limits FROM roles WHERE name = 'pv-processor-role'",
     );
     expect(rows[0]!.limits).toMatchObject({
       skills: { "case-intake@1": { maxInvocationsPerRun: 2 } },
+    });
+  });
+
+  it("the binding seriousness-assess and e2b-submit skills are high-risk (gate-forced)", async () => {
+    const { rows } = await db.pool.query<{ name: string; risk_tier: string }>(
+      "SELECT name, risk_tier FROM skills WHERE name IN ('seriousness-assess', 'e2b-submit', 'case-triage', 'case-intake') ORDER BY name",
+    );
+    const tiers = Object.fromEntries(rows.map((r) => [r.name, r.risk_tier]));
+    expect(tiers).toMatchObject({
+      "case-intake": "low",
+      "case-triage": "low",
+      "seriousness-assess": "high",
+      "e2b-submit": "high",
     });
   });
 
@@ -750,7 +767,16 @@ describe("pv-icsr-processing — the medicines demo, end to end via the API", ()
     // notify@1 runs over REAL MCP stdio; its receipt is the step output.
     expect(submit.output).toMatchObject({ delivered: true, channel: "#pv" });
 
-    // narrative-draft@1 drafted one narrative per planted expedited case.
+    // seriousness-assess@1 is HIGH-risk: it ran only AFTER the gate and made the
+    // binding determination over the two planted cases, confirming the clock.
+    const assessEvents = detail.auditEvents.filter(
+      (e: { event_type: string; payload: { skillRef?: string } }) =>
+        e.event_type === "skill.invoked" && e.payload.skillRef === "seriousness-assess@1",
+    );
+    expect(assessEvents).toHaveLength(1);
+    expect(assessEvents[0].payload.output.expeditedCount).toBe(2);
+
+    // narrative-draft@1 drafted one narrative per confirmed expedited case.
     const draftEvents = detail.auditEvents.filter(
       (e: { event_type: string; payload: { skillRef?: string } }) =>
         e.event_type === "skill.invoked" && e.payload.skillRef === "narrative-draft@1",
@@ -758,8 +784,18 @@ describe("pv-icsr-processing — the medicines demo, end to end via the API", ()
     expect(draftEvents).toHaveLength(1);
     expect(draftEvents[0].payload.output.icsrCount).toBe(2);
 
+    // e2b-submit@1 is HIGH-risk: it transmitted both confirmed ICSRs in E2B(R3),
+    // the irreversible filing — and it too ran only after the gate.
+    const submitEvents = detail.auditEvents.filter(
+      (e: { event_type: string; payload: { skillRef?: string } }) =>
+        e.event_type === "skill.invoked" && e.payload.skillRef === "e2b-submit@1",
+    );
+    expect(submitEvents).toHaveLength(1);
+    expect(submitEvents[0].payload.output.submittedCount).toBe(2);
+
     // Full evidentiary sequence — and no enforcement.limit_violation: the
     // intake cap (max 2/run) is present but the single invocation stays under.
+    // The post-gate step invokes four skills (assess, draft, submit, notify).
     const eventTypes = detail.auditEvents.map((e: { event_type: string }) => e.event_type);
     expect(eventTypes).toEqual([
       "run.created",
@@ -771,6 +807,8 @@ describe("pv-icsr-processing — the medicines demo, end to end via the API", ()
       "approval.decided",
       "approval.resolved",
       "run.step.started",
+      "skill.invoked",
+      "skill.invoked",
       "skill.invoked",
       "skill.invoked",
       "run.step.completed",
@@ -1242,6 +1280,260 @@ describe("cold-chain-disposition — the safe/consequential asymmetry demo, end 
     // The rejected flow was never persisted.
     const exists = await db.pool.query("SELECT 1 FROM flows WHERE name = $1", [
       "cold-chain-disposition-ungated",
+    ]);
+    expect(exists.rows).toHaveLength(0);
+  });
+});
+
+describe("gmp-em-excursion-disposition — the GMP/EM asymmetry demo, end to end via the API", () => {
+  let runId: string;
+  let qaAuth: Record<string, string>;
+
+  beforeAll(async () => {
+    // The QA disposition owner must be an authenticated user: the disposition
+    // gate is identity-mode (forbid_requester), so anonymous decisions fail
+    // closed — the engine expression of 21 CFR 211.22 quality-unit independence.
+    const row = await db.pool.query<{ id: string }>(
+      `INSERT INTO users (email, password_hash, display_name)
+       VALUES ('qa-disposition@aseptic.example', 'x', 'QA Disposition') RETURNING id`,
+    );
+    const key = await generateApiKey(db.pool, { userId: row.rows[0]!.id, name: "qa-disposition-key" });
+    qaAuth = { authorization: `Bearer ${key.plaintext}` };
+  });
+
+  it("the monitor role carries an enforced ingest cap the demo stays under; QA has none", async () => {
+    const monitor = await db.pool.query<{ limits: Record<string, unknown> }>(
+      "SELECT limits FROM roles WHERE name = 'em-analyst-role'",
+    );
+    expect(monitor.rows[0]!.limits).toMatchObject({
+      skills: { "em-ingest@1": { maxInvocationsPerRun: 2 } },
+    });
+    const qa = await db.pool.query<{ limits: Record<string, unknown> }>(
+      "SELECT limits FROM roles WHERE name = 'qa-disposition-role'",
+    );
+    expect(qa.rows[0]!.limits).toEqual({});
+  });
+
+  it("the batch-disposition skill is high-risk — the tier that structurally forces the gate", async () => {
+    const { rows } = await db.pool.query<{ risk_tier: string }>(
+      "SELECT risk_tier FROM skills WHERE name = 'batch-disposition' AND version = 1",
+    );
+    expect(rows[0]!.risk_tier).toBe("high");
+  });
+
+  it("the analyst and QA roles are bound by an SoD constraint (211.22 independence)", async () => {
+    const { rows } = await db.pool.query<{ description: string }>(
+      `SELECT sc.description FROM sod_constraints sc
+         JOIN roles a ON a.id = sc.role_a_id
+         JOIN roles b ON b.id = sc.role_b_id
+        WHERE (a.name = 'em-analyst-role' AND b.name = 'qa-disposition-role')
+           OR (a.name = 'qa-disposition-role' AND b.name = 'em-analyst-role')`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.description).toContain("may not own its final batch disposition");
+  });
+
+  it("triggers the flow through the API and parks at the QA disposition gate", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/flows/gmp-em-excursion-disposition/runs",
+      payload: {
+        input: {
+          excursionsPath: join(EM_EXAMPLES, "excursions.csv"),
+          limitsPath: join(EM_EXAMPLES, "em_limits.csv"),
+          readingsPath: join(EM_EXAMPLES, "em_readings.csv"),
+        },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    runId = res.json().runId;
+    expect(await waitForRunStatus(runId, ["waiting_approval", "failed"])).toBe("waiting_approval");
+  });
+
+  it("the agent quarantines the affected batch ITSELF, pre-gate — the safe direction is ungated", async () => {
+    const detail = (await app.inject({ method: "GET", url: `/api/runs/${runId}` })).json();
+    const assess = detail.steps.find(
+      (s: { step_key: string; status: string }) =>
+        s.step_key === "assess" && s.status === "completed",
+    );
+    // The single affected batch, assessed and quarantined before the gate.
+    expect(assess.output.held).toBe(true);
+    expect(assess.output.heldUnits).toBe(12000);
+    expect(assess.output.holdList).toEqual(["BATCH-7731"]);
+
+    // batch-quarantine@1 ran inside the pre-gate step — proof the agent moved
+    // toward safety on its own, with no approval.
+    const quarantineEvents = detail.auditEvents.filter(
+      (e: { event_type: string; payload: { skillRef?: string } }) =>
+        e.event_type === "skill.invoked" && e.payload.skillRef === "batch-quarantine@1",
+    );
+    expect(quarantineEvents).toHaveLength(1);
+    expect(quarantineEvents[0].payload.output.held).toBe(true);
+
+    // The incident is assessed from the viable-air trace: peak 38 CFU against a
+    // 10 CFU action limit, 180 minutes over limit — beyond spec, reject.
+    expect(assess.output).toMatchObject({
+      peakCfu: 38,
+      minutesOverLimit: 180,
+      classification: "beyond",
+      recommendedDisposition: "reject",
+      actionLimitCfu: 10,
+    });
+    expect(assess.output.readings).toHaveLength(13);
+
+    // The agent wrote a cited excursion report — the artifact QA signs against.
+    expect(assess.output.report.title).toBe("Environmental Monitoring Excursion Report");
+    expect(assess.output.report.body).toHaveLength(3);
+    expect(assess.output.report.footnotes).toHaveLength(3);
+
+    // The high-risk, gated act step has NOT run.
+    expect(detail.steps.some((s: { step_key: string }) => s.step_key === "act")).toBe(false);
+    // batch-disposition@1 never fired pre-gate.
+    expect(
+      detail.auditEvents.some(
+        (e: { event_type: string; payload: { skillRef?: string } }) =>
+          e.event_type === "skill.invoked" && e.payload.skillRef === "batch-disposition@1",
+      ),
+    ).toBe(false);
+  });
+
+  it("the inbox lists the QA gate as a single-approval identity gate", async () => {
+    const inbox = (await app.inject({ method: "GET", url: "/api/approvals" })).json();
+    const pending = inbox.approvals.find((a: { run_id: string }) => a.run_id === runId);
+    expect(pending).toMatchObject({
+      flow: "gmp-em-excursion-disposition",
+      step_key: "disposition_decision",
+      required_approvals: 1,
+      approved_count: 0,
+    });
+  });
+
+  it("the monitor who triggered the run is forbidden from owning its disposition", async () => {
+    // forbid_requester denies an anonymous decision in demo mode — fail closed.
+    const inbox = (await app.inject({ method: "GET", url: "/api/approvals" })).json();
+    const pending = inbox.approvals.find((a: { run_id: string }) => a.run_id === runId);
+    const decide = await app.inject({
+      method: "POST",
+      url: `/api/approvals/${pending.id}/decision`,
+      payload: { decision: "approved" },
+    });
+    expect(decide.statusCode).toBe(403);
+    expect(decide.json().error).toContain("authenticated");
+
+    const detail = (await app.inject({ method: "GET", url: `/api/runs/${runId}` })).json();
+    expect(detail.run.status).toBe("waiting_approval");
+    expect(detail.approvals[0].decisions).toEqual([]);
+    expect(
+      detail.auditEvents.some(
+        (e: { event_type: string }) => e.event_type === "approval.decision_denied",
+      ),
+    ).toBe(true);
+  });
+
+  it("the QA owner decides the one-way door; batch-disposition runs only after the gate", async () => {
+    const inbox = (await app.inject({ method: "GET", url: "/api/approvals" })).json();
+    const pending = inbox.approvals.find((a: { run_id: string }) => a.run_id === runId);
+
+    // Identity gates demand an authenticated decision even in demo mode —
+    // re-enable auth just for the QA decision.
+    delete process.env.MAKERCHECKER_AUTH_DISABLED;
+    let decide;
+    try {
+      decide = await app.inject({
+        method: "POST",
+        url: `/api/approvals/${pending.id}/decision`,
+        headers: qaAuth,
+        payload: {
+          decision: "approved",
+          reason: "Reject the batch: beyond validated EM limits per the viable-air trace",
+        },
+      });
+    } finally {
+      process.env.MAKERCHECKER_AUTH_DISABLED = "1";
+    }
+    expect(decide.statusCode).toBe(200);
+
+    expect(await waitForRunStatus(runId, ["completed", "failed"], 30_000)).toBe("completed");
+
+    const detail = (await app.inject({ method: "GET", url: `/api/runs/${runId}` })).json();
+    const act = detail.steps.find((s: { step_key: string }) => s.step_key === "act");
+    expect(act.status).toBe("completed");
+    // notify@1 runs over REAL MCP stdio; its receipt is the step output.
+    expect(act.output).toMatchObject({ delivered: true, channel: "#em-qa" });
+
+    // batch-disposition@1 executed exactly once, ONLY after the gate: the single
+    // beyond-spec batch is rejected per the QA decision.
+    const actEvents = detail.auditEvents.filter(
+      (e: { event_type: string; payload: { skillRef?: string } }) =>
+        e.event_type === "skill.invoked" && e.payload.skillRef === "batch-disposition@1",
+    );
+    expect(actEvents).toHaveLength(1);
+    expect(actEvents[0].payload.output).toMatchObject({
+      releasedCount: 0,
+      rejectedCount: 1,
+      heldForJudgmentCount: 0,
+    });
+
+    // Full evidentiary sequence: the assess step records THREE skill.invoked
+    // (em-ingest, excursion-assess, batch-quarantine) before the gate, then the
+    // act step records TWO (batch-disposition, notify) after it. The
+    // approval.decision_denied is the requester's forbidden attempt (the prior
+    // test) — faithfully recorded in the chain before the valid QA decision. No
+    // enforcement.limit_violation: the ingest cap (max 2/run) stays under.
+    const eventTypes = detail.auditEvents.map((e: { event_type: string }) => e.event_type);
+    expect(eventTypes).toEqual([
+      "run.created",
+      "run.step.started",
+      "skill.invoked",
+      "skill.invoked",
+      "skill.invoked",
+      "run.step.completed",
+      "approval.requested",
+      "approval.decision_denied",
+      "approval.decided",
+      "approval.resolved",
+      "run.step.started",
+      "skill.invoked",
+      "skill.invoked",
+      "run.step.completed",
+      "run.completed",
+    ]);
+  }, 40_000);
+
+  it("the audit chain verifies after the GMP/EM demo", async () => {
+    const res = (await app.inject({ method: "GET", url: "/api/audit/verify" })).json();
+    expect(res.ok).toBe(true);
+  });
+
+  it("rejects publishing a flow that uses the high-risk batch-disposition WITHOUT a preceding gate", async () => {
+    // The headline structural guarantee: the one-way door cannot be wired into a
+    // flow ungated. Same agent, same high-risk skill, but no approval gate before
+    // the step that uses it — publish must fail with high_risk_requires_gate.
+    const publish = publishFlowVersion(db.pool, {
+      actor: { type: "system", id: "test", name: "test" },
+      definition: {
+        name: "gmp-em-excursion-disposition-ungated",
+        steps: [
+          {
+            key: "assess",
+            agent: "em-monitor",
+            skills: ["em-ingest@1", "excursion-assess@1", "batch-quarantine@1"],
+          },
+          {
+            // No approval gate precedes this step — the high-risk skill is exposed.
+            key: "act",
+            agent: "em-monitor",
+            skills: ["batch-disposition@1", "notify@1"],
+          },
+        ],
+      },
+    });
+    await expect(publish).rejects.toThrow(FlowValidationError);
+    await expect(publish).rejects.toThrow(/high-risk.*approval gate/);
+
+    // The rejected flow was never persisted.
+    const exists = await db.pool.query("SELECT 1 FROM flows WHERE name = $1", [
+      "gmp-em-excursion-disposition-ungated",
     ]);
     expect(exists.rows).toHaveLength(0);
   });

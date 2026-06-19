@@ -1,0 +1,46 @@
+# Reference copy of the seeded flow definition (the database is canonical).
+#
+# Safe/consequential asymmetry: the case-processor agent may PROPOSE which cases
+# look serious-and-unexpected (case-triage, low risk, ungated), but the two
+# irreversible regulatory acts are gated to a named medical reviewer. Both
+# seriousness-assess (which STARTS the 15-day clock) and e2b-submit (which FILES
+# the report) are risk_tier high, so the engine structurally forces the
+# preceding identity-mode (forbid_requester) gate — the processor who triaged a
+# case can never start its clock or submit it.
+name: pv-icsr-processing
+steps:
+  - key: intake_triage
+    agent: pv-case-processor
+    skills: [case-intake@1, case-triage@1] # both low risk: ingest + advisory proposal
+    instructions: >-
+      Intake the day's adverse-event cases and PROPOSE seriousness/expectedness
+      per case: surface the serious-and-unexpected cases as candidates for the
+      15-day expedited clock with a rationale. Advisory only — the binding call
+      is the medical reviewer's at the gate.
+    retries: { max_attempts: 3, backoff: exponential }
+    timeout_ms: 120000
+  - key: medical_review
+    type: approval_gate
+    title: Medical review — seriousness and expectedness confirmation
+    approvals: { min_approvals: 1, forbid_requester: true }
+  - key: submit
+    agent: pv-case-processor
+    # seriousness-assess@1 and e2b-submit@1 are risk_tier HIGH: the binding
+    # determination that starts the 15-day clock and the one-way E2B(R3) filing.
+    skills: [seriousness-assess@1, narrative-draft@1, e2b-submit@1, notify@1]
+    instructions: >-
+      On the reviewer-confirmed cases: make the binding serious-and-unexpected
+      determination and start the 15-day expedited clock, draft the cited ICSR
+      narratives, transmit them to the regulatory gateway in E2B(R3) format, and
+      notify the #pv channel.
+    timeout_ms: 120000
+
+# Segregation of duties (enforced at runtime, fail-closed):
+#   pv-processor-role  <->  pv-physician-role
+#   "the processor who triages a case may not perform its medical review"
+sod_constraints:
+  - roles: [pv-processor-role, pv-physician-role]
+    rationale: >-
+      Independent medical review under EU GVP (Module I) / QPPV oversight
+      (US: 21 CFR 314.80) — the reviewer who signs a case's seriousness and
+      expedited determination may not be the processor who triaged it.
