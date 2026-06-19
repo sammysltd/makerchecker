@@ -92,7 +92,7 @@ describe("seed", () => {
   it("is idempotent", async () => {
     await seedDemo(db.pool);
     const flows = await db.pool.query("SELECT count(*) AS n FROM flows");
-    expect(Number(flows.rows[0].n)).toBe(8);
+    expect(Number(flows.rows[0].n)).toBe(9);
   });
 
   it("seeds two identities so identity-mode gates are decidable in the live demo", async () => {
