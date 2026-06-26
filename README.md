@@ -6,8 +6,6 @@
 
 **Website: [makerchecker.ai](https://makerchecker.ai)**
 
-**Your AI agent moved the money. No one approved it.**
-
 MakerChecker is self-hosted software that governs AI agents through **structural enforcement** and **human approvals**. Structural enforcement runs at machine speed with no human in the path: an agent acts only through a **role**, runs only the skills its role was **granted** (deny by default, pinned to an exact version), cannot exceed its limits, and provably cannot approve its own work. Human approval is reserved for the few high-risk actions where a rule requires a named person to sign. Every action commits to a hash-chained, Ed25519-signed **audit log** that anyone verifies offline. Change one row and verification breaks at it.
 
 Your agents keep running in their existing framework. MakerChecker is the checkpoint in front of them and the record behind them: a Fastify server on Postgres. Agents connect as a **flow** (MakerChecker runs the steps and gates) or a **proxy session** (MakerChecker authorizes and records tool calls your framework executes). Both write the same audit chain.
