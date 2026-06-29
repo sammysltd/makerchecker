@@ -1,0 +1,38 @@
+{
+  "id": "AID-2022-0001",
+  "slug": "air-canada-chatbot-bereavement-refund-binding",
+  "title": "Air Canada Chatbot Bound Airline to Invented Bereavement Refund Policy",
+  "incidentYear": 2022,
+  "incidentDateText": "November 2022",
+  "category": "binding-commitment",
+  "severity": "high",
+  "oneLineSummary": "Air Canada's website chatbot invented a bereavement refund policy that no longer existed, a customer booked on that basis, and a BC tribunal ordered the airline to honour the false promise.",
+  "whatHappened": "In November 2022, Air Canada's website chatbot told customer Jake Moffatt he could claim a retroactive bereavement-fare discount within 90 days of booking. No such policy existed. Moffatt booked his flight relying on the chatbot's statement. When he later attempted to claim the discount, Air Canada refused it. Moffatt took the airline to the BC Civil Resolution Tribunal, which found negligent misrepresentation in February 2024 and ordered Air Canada to honour the promise, ordering payment of approximately 483 CAD. The tribunal rejected the airline's argument that the chatbot was a separate entity not responsible for its statements.",
+  "agentAction": "The chatbot fabricated a customer-facing policy promise (retroactive bereavement discount within 90 days) and then attempted to execute a binding financial commitment (refund of 483 CAD) on a non-existent policy basis without authorization or review.",
+  "irreversibleEffect": "Tribunal judgment ordering Air Canada to pay approximately 483 CAD to the customer; legal precedent establishing that chatbots' statements can bind their parent organization to financial obligations even when no such policy exists.",
+  "rootCause": "The chatbot had uncontrolled authority to make binding financial commitments without segregation from its question-answering function. There was no deny-by-default control preventing refund commitments by the support-facing bot, no approval gate requiring human review of non-standard policy bases, and no argument-level limits (amount ceiling or allowlist) on refund commitment parameters.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "sod_violation",
+    "high_risk_requires_gate",
+    "limit_violation",
+    "approval_gate"
+  ],
+  "makercheckerRefusal": "MakerChecker would refuse the binding commitment attempt via multiple overlapping controls: (1) skill_not_granted — the support-agent role holds no refund-commit grant of any kind; (2) sod_violation — answering and committing are segregated into different roles; (3) limit_violation (allowlist) — policyBasis='retroactive-bereavement' is not in the allowed list [flight-delay, cancellation, baggage]; (4) limit_violation (amount) — amount 483 CAD exceeds the per-invocation limit of 200; (5) high_risk_requires_gate — any open-amount refund commitment is categorically refused on the proxy and must run through a governed flow with a preceding approval gate by a named officer who is not the requester.",
+  "sources": [
+    {
+      "title": "BC Civil Resolution Tribunal Decision 2024BCCRT149 (Moffatt v Air Canada)",
+      "url": "https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html"
+    },
+    {
+      "title": "McCarthy Tetrault: Moffatt v. Air Canada — Misrepresentation & AI Chatbot",
+      "url": "https://www.mccarthy.ca/en/insights/blogs/techlex/moffatt-v-air-canada-misrepresentation-ai-chatbot"
+    },
+    {
+      "title": "Pinsent Masons: Air Canada Chatbot Case Highlights AI Liability Risks",
+      "url": "https://www.pinsentmasons.com/out-law/news/air-canada-chatbot-case-highlights-ai-liability-risks"
+    }
+  ],
+  "reproPath": "examples/air-canada-chatbot-bereavement-refund-binding",
+  "reproducible": true
+}

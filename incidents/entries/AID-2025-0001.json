@@ -1,0 +1,35 @@
+{
+  "id": "AID-2025-0001",
+  "slug": "camoleak-github-copilot-chat-source-code-exfiltration",
+  "title": "CamoLeak: GitHub Copilot Chat Exfiltrates Private Source Code via Hidden Markdown Instructions",
+  "incidentYear": 2025,
+  "incidentDateText": "October 2025",
+  "category": "data-exfiltration",
+  "severity": "critical",
+  "oneLineSummary": "Hidden markdown instructions in pull requests caused GitHub Copilot Chat to exfiltrate private source code and secrets to attacker-controlled servers.",
+  "whatHappened": "CamoLeak (CVE-2025-59145) was a critical vulnerability in GitHub Copilot Chat disclosed by Legit Security in October 2025. Invisible markdown instructions embedded in pull requests or issues instructed Copilot Chat to read private source code and secrets, then exfiltrate them via approximately 100 image requests to attacker-controlled URLs served through GitHub's Camo image proxy. This bypassed the Content Security Policy that would have blocked direct external requests. GitHub mitigated the vulnerability by disabling image rendering in Copilot Chat in August 2025, before the public disclosure in October 2025.",
+  "agentAction": "GitHub Copilot Chat made outbound HTTP requests to attacker-controlled image URLs, exfiltrating private source code and secrets it had previously read from the compromised repository.",
+  "irreversibleEffect": "Private source code and application secrets were transmitted to attacker-controlled servers, granting unauthorized actors access to sensitive intellectual property and credentials.",
+  "rootCause": "GitHub Copilot Chat lacked critical governance controls: it accepted and executed instructions directly from untrusted input (hidden markdown in pull requests) without requiring human approval for high-risk actions. The agent had no segregation of duties, no approval gates for sensitive operations like reading secrets or making external requests, and no deny-by-default restrictions on outbound communication channels. The Camo proxy CSP bypass provided an additional weakness in the exfiltration mechanism.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "high_risk_requires_gate"
+  ],
+  "makercheckerRefusal": "MakerChecker blocks this incident with two complementary controls: (1) Deny-by-default skill grants: the outbound-fetch skill is never granted to the Copilot role, so when the injected instruction attempts to call it, the proxy refuses with 'skill_not_granted', permanently closing the exfiltration channel. (2) High-risk approval gate: the secrets-read skill is marked high-risk, and the proxy categorically refuses it with 'high_risk_requires_gate', requiring execution only within a governed flow behind a preceding approval gate where a named reviewer authorizes which secrets are read and why.",
+  "sources": [
+    {
+      "title": "Legit Security: CamoLeak Critical GitHub Copilot Vulnerability Leaks Private Source Code",
+      "url": "https://www.legitsecurity.com/blog/camoleak-critical-github-copilot-vulnerability-leaks-private-source-code"
+    },
+    {
+      "title": "Dark Reading: GitHub Copilot CamoLeak AI Attack Exfiltrates Data",
+      "url": "https://www.darkreading.com/application-security/github-copilot-camoleak-ai-attack-exfils-data"
+    },
+    {
+      "title": "The Register: GitHub Copilot Chat Vulnerability",
+      "url": "https://www.theregister.com/2025/10/09/github_copilot_chat_vulnerability/"
+    }
+  ],
+  "reproPath": "examples/camoleak-github-copilot-chat-source-code-exfiltration",
+  "reproducible": true
+}

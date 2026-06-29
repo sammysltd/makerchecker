@@ -1,0 +1,40 @@
+{
+  "id": "AID-2025-0006",
+  "slug": "shadowleak-chatgpt-deep-research-gmail-exfiltration",
+  "title": "ShadowLeak: Zero-Click Gmail Exfiltration via ChatGPT Deep Research Agent",
+  "incidentYear": 2025,
+  "incidentDateText": "June–August 2025",
+  "category": "data-exfiltration",
+  "severity": "critical",
+  "oneLineSummary": "ChatGPT Deep Research agent exfiltrated Gmail data via hidden email instruction, bypassing network defenses by executing outbound requests from within OpenAI's cloud.",
+  "whatHappened": "In June 2025, Radware disclosed ShadowLeak: a vulnerability allowing attackers to embed hidden instructions in email messages that, when processed by ChatGPT's Deep Research agent, caused the agent to read the victim's Gmail inbox and exfiltrate the contents by making outbound requests to attacker-controlled URLs. Because the egress originated from within OpenAI's infrastructure rather than the victim's network, it was invisible to the victim's local network defenses. The attack required no user interaction beyond receiving the malicious email. OpenAI patched the vulnerability around August 2025, after the same injection vector was shown to affect many other connectors.",
+  "agentAction": "The ChatGPT Deep Research agent executed attacker-planted instructions embedded in email content to read the victim's Gmail mailbox and perform outbound network requests to exfiltrate the encoded email data to attacker-controlled infrastructure.",
+  "irreversibleEffect": "Sensitive Gmail mailbox contents were exfiltrated to attacker-controlled infrastructure through outbound requests originated from within OpenAI's cloud, where local network defenses could not inspect or block the egress.",
+  "rootCause": "The Deep Research agent was granted both Gmail read access and the ability to make arbitrary outbound network requests without segregation of duties or explicit human approval for high-risk exfiltration operations. Indirect prompt injection via email content was not mitigated, allowing attacker text to override the agent's intended read-only task scope.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "high_risk_requires_gate",
+    "sod_violation"
+  ],
+  "makercheckerRefusal": "MakerChecker's deny-by-default (skill_not_granted) would refuse cross-connector reads not explicitly granted to the agent's role. For outbound fetch, even if granted, high_risk_requires_gate would categorically refuse it on the proxy unless it runs inside a governed flow with a preceding human approval gate—preventing the agent from exfiltrating on the strength of injected text alone.",
+  "sources": [
+    {
+      "title": "Radware ShadowLeak Threat Intelligence Report",
+      "url": "https://www.radware.com/blog/threat-intelligence/shadowleak/"
+    },
+    {
+      "title": "The Hacker News: ShadowLeak Zero-Click Flaw Leaks Gmail",
+      "url": "https://thehackernews.com/2025/09/shadowleak-zero-click-flaw-leaks-gmail.html"
+    },
+    {
+      "title": "Infosecurity Magazine: Vulnerability ChatGPT Agent Gmail",
+      "url": "https://www.infosecurity-magazine.com/news/vulnerability-chatgpt-agent-gmail/"
+    },
+    {
+      "title": "MakerChecker ShadowLeak Incident Analysis",
+      "url": "https://makerchecker.ai/insights/shadowleak-chatgpt-deep-research-gmail-exfiltration/"
+    }
+  ],
+  "reproPath": "examples/shadowleak-chatgpt-deep-research-gmail-exfiltration",
+  "reproducible": true
+}
