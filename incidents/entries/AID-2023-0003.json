@@ -1,0 +1,41 @@
+{
+  "id": "AID-2023-0003",
+  "slug": "unitedhealth-nhpredict-ai-medicare-denials",
+  "title": "UnitedHealth nH Predict Denied Medicare Post-Acute Care Without Clinician Authorization",
+  "incidentYear": 2023,
+  "incidentDateText": "November 2023",
+  "category": "wrongful-automated-decision",
+  "severity": "critical",
+  "oneLineSummary": "AI coverage-denial system committed post-acute care denials to Medicare Advantage beneficiaries at 90% error rate without named clinician authorization.",
+  "whatHappened": "UnitedHealth and NaviHealth used the nH Predict AI model to override treating physicians and deny post-acute care to Medicare Advantage members, with an alleged 90% reversal rate when members appealed. A class action filed in November 2023 charged that no named clinician signed each denial and no audit record existed of who approved the decision or on what basis. The federal court allowed breach-of-contract claims to proceed and ordered broad discovery (2025-2026); only approximately 0.2% of affected members appealed, allowing erroneous denials to stand as final.",
+  "agentAction": "The nH Predict system and coverage-decision workflow committed denials of post-acute care benefits to Medicare Advantage members without requiring prior authorization from a treating clinician or any named human approver, with no audit trail of who approved each decision.",
+  "irreversibleEffect": "Thousands of Medicare Advantage beneficiaries were denied post-acute care benefits, with denials becoming final unless the member appealed; denial of medically necessary care; economic and health harm to vulnerable beneficiaries; erosion of trust in automated coverage decisions.",
+  "rootCause": "No segregation of duties between the system recommending denials and the system finalizing them; no requirement for a named human clinician to approve each denial before it became irreversible; absence of audit accountability (no record of who authorized each decision); proxy access allowing denials to bypass approval gates.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "sod_violation",
+    "high_risk_requires_gate",
+    "approval_gate"
+  ],
+  "makercheckerRefusal": "MakerChecker would block this by denying the assess-and-deny workflow access via two complementary refusals: (1) skill_not_granted—the assessment system holds no commit skill and cannot finalize denials; (2) high_risk_requires_gate—even a clinician reviewer cannot commit through the proxy and must use a governed approval-gate flow where a named clinician signs each denial before execution. The audit trail records who approved what and on what basis, leaving no room for unsigned denials to execute.",
+  "sources": [
+    {
+      "title": "CBS News: UnitedHealth Lawsuit AI Deny Claims Medicare Advantage Health Insurance Denials",
+      "url": "https://www.cbsnews.com/news/unitedhealth-lawsuit-ai-deny-claims-medicare-advantage-health-insurance-denials/"
+    },
+    {
+      "title": "Healthcare Finance News: Class Action Lawsuit Against UnitedHealth's AI Claim Denials Advances",
+      "url": "https://www.healthcarefinancenews.com/news/class-action-lawsuit-against-unitedhealths-ai-claim-denials-advances"
+    },
+    {
+      "title": "ArentFox Schiff Alert: Federal Court Orders Broad Discovery Against UHC AI Coverage Denial Lawsuit",
+      "url": "https://www.afslaw.com/perspectives/alerts/federal-court-orders-broad-discovery-against-uhc-ai-coverage-denial-lawsuit"
+    },
+    {
+      "title": "MakerChecker Insights: UnitedHealth nH Predict AI Medicare Denials",
+      "url": "https://makerchecker.ai/insights/unitedhealth-nhpredict-ai-medicare-denials/"
+    }
+  ],
+  "reproPath": "examples/unitedhealth-nhpredict-ai-medicare-denials",
+  "reproducible": true
+}

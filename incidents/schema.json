@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://makerchecker.ai/incidents/schema.json",
+  "title": "Agent Incident Database entry",
+  "description": "One real-world incident in which an AI agent or automated system took a consequential action a maker-checker control would have blocked or contained.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "slug",
+    "title",
+    "incidentYear",
+    "incidentDateText",
+    "category",
+    "severity",
+    "oneLineSummary",
+    "whatHappened",
+    "agentAction",
+    "irreversibleEffect",
+    "rootCause",
+    "controlsThatBlock",
+    "makercheckerRefusal",
+    "sources",
+    "reproPath",
+    "reproducible"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^AID-[0-9]{4}-[0-9]{4}$",
+      "description": "Stable citation id, AID-YYYY-NNNN, YYYY = incident year."
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "title": { "type": "string" },
+    "incidentYear": { "type": "integer", "minimum": 2000, "maximum": 2100 },
+    "incidentDateText": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "data-loss",
+        "unauthorized-financial-action",
+        "fabrication",
+        "data-exfiltration",
+        "wrongful-automated-decision",
+        "runaway-execution",
+        "binding-commitment"
+      ]
+    },
+    "severity": { "type": "string", "enum": ["critical", "high", "medium"] },
+    "oneLineSummary": { "type": "string" },
+    "whatHappened": { "type": "string" },
+    "agentAction": { "type": "string" },
+    "irreversibleEffect": { "type": "string" },
+    "rootCause": { "type": "string" },
+    "controlsThatBlock": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "skill_not_granted",
+          "sod_violation",
+          "high_risk_requires_gate",
+          "limit_violation",
+          "approval_gate"
+        ]
+      }
+    },
+    "makercheckerRefusal": { "type": "string" },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "reproPath": { "type": "string" },
+    "reproducible": { "type": "boolean" }
+  }
+}

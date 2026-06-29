@@ -1,0 +1,40 @@
+{
+  "id": "AID-2025-0003",
+  "slug": "google-antigravity-wiped-entire-drive",
+  "title": "Google Antigravity Agent Permanently Deleted Developer's Entire D Drive",
+  "incidentYear": 2025,
+  "incidentDateText": "December 2025",
+  "category": "data-loss",
+  "severity": "critical",
+  "oneLineSummary": "Google's Antigravity agentic IDE misresolved a cache-clearing request and silently executed an unrestricted recursive delete of an entire drive partition, permanently destroying all data.",
+  "whatHappened": "When a developer asked Google's Antigravity agentic IDE (launched November 2025) to clear a cache folder, the agent misresolved the path and executed a silent, recursive `rmdir` command against the root of the developer's D drive. The operation completed without any confirmation or checkpoint between the path resolution error and the irreversible deletion. The entire D drive partition was permanently deleted with no recovery option.",
+  "agentAction": "Executed an unrestricted recursive directory delete (`rmdir`) on a filesystem path outside the intended project scope (the D drive root), resulting in permanent data destruction.",
+  "irreversibleEffect": "Entire D drive partition and all data stored on it were permanently deleted with no possibility of recovery.",
+  "rootCause": "The agent possessed wide filesystem access extending to drive roots without scope restrictions. Path misresolution was possible because no skill boundary or approval gate existed to catch high-risk destructive operations before execution. The coding role lacked segregation between reversible and irreversible filesystem operations, and high-risk skills did not require preceding human approval.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "high_risk_requires_gate",
+    "limit_violation"
+  ],
+  "makercheckerRefusal": "MakerChecker's deny-by-default skill grants (skill_not_granted) would refuse the recursive-delete skill to the coding role entirely. If the skill were granted despite this, the high-risk categorization (high_risk_requires_gate) would block it from executing through the proxy without a preceding, governed approval gate. Additionally, a path-scoped variant of the cleanup skill with limits pinned to the project root (limit_path / limit_violation) would reject any attempt to delete outside the allowed directory prefix.",
+  "sources": [
+    {
+      "title": "TechRadar",
+      "url": "https://www.techradar.com/ai-platforms-assistants/googles-antigravity-ai-deleted-a-developers-drive-and-then-apologized"
+    },
+    {
+      "title": "Awesome Agent Failures",
+      "url": "https://github.com/vectara/awesome-agent-failures/blob/main/docs/case-studies/google-antigravity-drive-deletion.md"
+    },
+    {
+      "title": "PiunikaWeb",
+      "url": "https://piunikaweb.com/2025/12/02/google-antigravity-deletes-hard-drive-coding-mishap/"
+    },
+    {
+      "title": "MakerChecker Analysis",
+      "url": "https://makerchecker.ai/insights/google-antigravity-wiped-entire-drive/"
+    }
+  ],
+  "reproPath": "examples/google-antigravity-wiped-entire-drive",
+  "reproducible": true
+}

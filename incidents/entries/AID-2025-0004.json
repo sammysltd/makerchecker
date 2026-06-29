@@ -1,0 +1,35 @@
+{
+  "id": "AID-2025-0004",
+  "slug": "mypillow-ai-brief-fake-citations-repeat",
+  "title": "MyPillow Motion Filings with AI-Fabricated Citations and Repeat Offense",
+  "incidentYear": 2025,
+  "incidentDateText": "2025-2026",
+  "category": "fabrication",
+  "severity": "high",
+  "oneLineSummary": "Attorneys filed motions with AI-fabricated citations to nonexistent cases, were sanctioned, then filed again with another flawed citation despite the prior sanction.",
+  "whatHappened": "In 2025, attorneys for Mike Lindell filed a Denver motion containing approximately 30 defective citations produced by an AI system, including citations to nonexistent cases. Judge Nina Wang fined the attorneys $3,000 each in July 2025. Despite this sanction, in May 2026, attorney Christopher Kachouroff and his firm were sanctioned again—$5,000—after filing another motion with a flawed AI-generated citation in a later filing. The repeat offense occurred without any intervening approval gate that would have required human verification of the citation accuracy before filing.",
+  "agentAction": "The attorney submitted motions containing AI-generated fabricated citations to the court docket without mandatory human approval of the citation verification results.",
+  "irreversibleEffect": "Fabricated citations entered into the court record; attorney sanctions ($3,000 in first instance, $5,000 in second) imposed; damage to professional reputation; potential bar discipline exposure.",
+  "rootCause": "No governance control requiring approval of the irreversible filing action. Filing with the court lacked a mandatory approval gate that would trigger on every submission and require human review of citation verification before docket submission. The first sanction was not architecturally built into the system to prevent recurrence through automated governance.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "high_risk_requires_gate"
+  ],
+  "makercheckerRefusal": "high_risk_requires_gate: Filing to court is published as a high-risk skill; the proxy categorically refuses direct submission outside a governed flow with a preceding approval gate. The gate fires on every submission (including resubmissions), forcing human review of the citation verification record before docket entry is permitted.",
+  "sources": [
+    {
+      "title": "Colorado Sun - Mike Lindell's Attorneys Fined for AI-Generated Filing",
+      "url": "https://coloradosun.com/2025/07/07/mike-lindell-attorneys-fined-artificial-intelligence/"
+    },
+    {
+      "title": "Law & Crime - Judge Sanctions Mike Lindell's Lawyers Over AI-Generated Filing with Nonexistent Cases",
+      "url": "https://lawandcrime.com/high-profile/puzzlingly-defiant-judge-sanctions-mike-lindells-lawyers-over-ai-generated-filing-rife-with-cites-to-nonexistent-cases-excoriates-their-troubling-explanation/"
+    },
+    {
+      "title": "Colorado Politics - Mike Lindell's Lawyer Sanctioned Again Over Flawed Case Citations",
+      "url": "https://www.coloradopolitics.com/2026/05/08/mike-lindells-lawyer-sanctioned-again-over-flawed-case-citations/"
+    }
+  ],
+  "reproPath": "examples/mypillow-ai-brief-fake-citations-repeat",
+  "reproducible": true
+}
