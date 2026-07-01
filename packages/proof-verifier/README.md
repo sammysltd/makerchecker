@@ -31,8 +31,8 @@ Exit code `0` = verified, `1` = failed, `2` = usage error.
 
 ```
 PASS  8 events, full chain (genesis-rooted)
-      head 0bcad691a02af976dc71359097a96d39cb880381a4a0c6e45edb3b0dfd200e68
-      key  sha256:460b8ebb6806467bfc0613e15eedbe217f7ad34da3d426bb510449161e7e9af5
+      head 0bcad691a02af97…edb3b0dfd200e68
+      key  sha256:460b8ebb…e7e9af5   (public-key fingerprint, abbreviated)
 ```
 
 ## Browser
