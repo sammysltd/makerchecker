@@ -13,6 +13,11 @@ packages/server/data/
 # at runtime into packages/server/data/, which is already ignored above).
 *.pem
 *.key
+# Exception: the proof-verifier conformance corpus ships committed PEMs — the
+# instance public key and a deliberately-public test-fixture signing key that
+# makes the corpus byte-reproducible (see
+# packages/proof-verifier/scripts/build-vectors.mjs).
+!packages/proof-verifier/vectors/*.pem
 
 # Internal / not part of the public repo (kept locally)
 CLAUDE.md
