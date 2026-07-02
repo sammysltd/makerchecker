@@ -7,6 +7,11 @@
  *   { eventType: "approval.decided" }                          >=1 such event
  *   { eventType: "enforcement.blocked",
  *     payloadMatch: { code: "skill_not_granted" } }            >=1 matching payload
+ *   { eventType: "approval.decided",
+ *     payloadHas: ["decider", "decision"] }                    >=1 event whose payload
+ *                                                              carries these fields
+ *                                                              (present, non-null,
+ *                                                              non-empty string)
  *   { eventType: "...", minCount: 2 }                          at least N
  *   { anyOf: [ <pred>, ... ] }                                 any child MET
  *   { allOf: [ <pred>, ... ] }                                 all children MET
@@ -25,12 +30,20 @@ export function indexEvents(events) {
 const dedupe = (xs) => [...new Set(xs)];
 
 function matchLeaf(idx, pred) {
-  const list = idx.byType.get(pred.eventType) ?? [];
-  if (!pred.payloadMatch) return list;
-  return list.filter((e) => {
-    const p = e.payload ?? {};
-    return Object.entries(pred.payloadMatch).every(([k, v]) => p[k] === v);
-  });
+  let list = idx.byType.get(pred.eventType) ?? [];
+  if (pred.payloadMatch) {
+    list = list.filter((e) => {
+      const p = e.payload ?? {};
+      return Object.entries(pred.payloadMatch).every(([k, v]) => p[k] === v);
+    });
+  }
+  if (pred.payloadHas) {
+    list = list.filter((e) => {
+      const p = e.payload ?? {};
+      return pred.payloadHas.every((k) => p[k] !== undefined && p[k] !== null && p[k] !== "");
+    });
+  }
+  return list;
 }
 
 export function evalPredicate(idx, pred, ctx) {

@@ -10,6 +10,7 @@
       "requirement": "The system must be able to discern invalid or altered records.",
       "applicableWhen": "always",
       "evidence": { "chainVerified": true },
+      "partial": true,
       "note": "Partial: the hash chain lets any altered record be discerned (verification fails at the altered seq). Full computerised-system validation is the operator's process."
     },
     {
@@ -59,8 +60,8 @@
       "title": "Signature manifestations — printed name of the signer, date and time, and meaning of the signature",
       "requirement": "A signed record carries the signer, the time, and the meaning of the signature.",
       "applicableWhen": { "eventType": "approval.requested" },
-      "evidence": { "eventType": "approval.decided" },
-      "note": "approval.decided carries the decider, the decision (meaning), the reason, and occurredAt (time)."
+      "evidence": { "eventType": "approval.decided", "payloadHas": ["decider", "decision"] },
+      "note": "MET only when approval.decided actually carries the decider (signer) and the decision (meaning) in its payload, plus occurredAt (time); a decision event missing either field does not manifest a signature."
     },
     {
       "id": "11.70",

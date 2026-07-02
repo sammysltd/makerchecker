@@ -25,8 +25,27 @@ mc-validate run --bundle run-evidence.json --protocol agent-governance-baseline 
 mc-validate run --bundle run-evidence.json --protocol agent-governance-baseline --key instance-pubkey.pem --json
 ```
 
-Exit code `0` if the system **qualified**, `1` if not (a failed test, an
-uncovered requirement, or a chain that did not verify).
+Exit code `0` only if the system **qualified**: the chain verified, every
+executed test passed, and every user requirement was exercised and covered —
+or explicitly waived. Exit code `1` for anything else: a failed test, an
+uncovered requirement, a requirement the bundle never exercised
+(**fail-closed** — "not exercised" is a gap, not a pass), or a chain that did
+not verify.
+
+A requirement your evidence never exercised (e.g. `URS-004` fail-closed limits,
+when the run never hit a limit) makes the report **NOT QUALIFIED**. Either
+capture challenge-run evidence — drive an over-limit request so the refusal is
+recorded — and re-run, or record an explicit deviation:
+
+```bash
+mc-validate run --bundle run-evidence.json --protocol agent-governance-baseline \
+  --waive URS-004 --reason "Fail-closed limits challenge scheduled for OQ round 2 (CAPA-114)" \
+  --out validation-report.md
+```
+
+Every `--waive` requires a written `--reason`; the waiver is printed verbatim in
+the report's **Deviations** section for the named reviewers to accept or reject.
+A waiver never rescues a requirement whose tests executed and failed.
 
 ## What it produces
 
@@ -34,10 +53,12 @@ uncovered requirement, or a chain that did not verify).
 - **OQ** — operational: each control fires (deny-by-default, high-risk gate, segregation of duties, fail-closed limits).
 - **PQ** — performance: a representative governed run completes end-to-end with a signed decision.
 - **Requirements Traceability Matrix** — URS → FS → test → result, with a coverage verdict per requirement.
+- **Deviations** — any waived (unexercised) requirement, with its recorded reason.
 - **Qualification statement** and an **approval block** for the operator's named reviewers (maker-checker applies to the validation itself: author ≠ approver).
 
-A tampered or incomplete bundle cannot qualify — the report says **NOT
-QUALIFIED** and states why.
+A tampered or incomplete bundle cannot qualify, and neither can a run that
+never exercised a requirement — the report says **NOT QUALIFIED** and states
+why, unless the gap is an explicitly recorded deviation.
 
 ## Protocols
 
@@ -62,14 +83,19 @@ No LLM, no network, no producer access.
 
 ```js
 import { generateValidation, renderReport } from "@makerchecker/validation-kit";
-const result = await generateValidation(bundle, protocol, { expectedPublicKeyPem });
+const result = await generateValidation(bundle, protocol, {
+  expectedPublicKeyPem,
+  waivers: [{ urs: "URS-004", reason: "Limits challenge scheduled for OQ round 2 (CAPA-114)" }],
+});
 const markdown = renderReport(result);
 ```
 
 ## Test
 
 ```bash
-npm test   # qualifies a real signed run; confirms a tampered bundle does not qualify
+npm test   # fail-closed: an unexercised requirement does NOT qualify; a waiver
+           # records a deviation; a challenge run covering every URS qualifies;
+           # a tampered bundle never qualifies
 ```
 
 ## License

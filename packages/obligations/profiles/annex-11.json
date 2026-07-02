@@ -10,6 +10,7 @@
       "requirement": "The system supports evidence that records are accurate and alterations are detectable.",
       "applicableWhen": "always",
       "evidence": { "chainVerified": true },
+      "partial": true,
       "note": "Partial: tamper-evidence is provided; lifecycle validation (URS/FS/IQ/OQ/PQ) is the operator's process — see the GxP validation kit."
     },
     {
@@ -36,14 +37,17 @@
     },
     {
       "id": "12.4",
-      "title": "Management of who can enter and change data; segregation of duties",
-      "requirement": "The person who prepares an action and the person who authorises it are separated.",
+      "title": "Management systems for data and for documents should be designed to record the identity of operators entering, changing, confirming or deleting data including date and time",
+      "requirement": "The identity of the operator entering, changing, confirming or deleting data is recorded, together with date and time.",
       "applicableWhen": "always",
-      "evidence": { "anyOf": [
-        { "eventType": "enforcement.sod_violation" },
-        { "eventType": "approval.decided" }
+      "evidence": { "allOf": [
+        { "chainVerified": true },
+        { "anyOf": [
+          { "eventType": "approval.decided", "payloadHas": ["decider"] },
+          { "eventType": "skill.invoked" }
+        ] }
       ] },
-      "note": "Segregation is enforced at runtime; a conflicting actor records enforcement.sod_violation, and gated actions are decided by a separate identity."
+      "note": "Every audit event records the acting identity (actor) and occurredAt (date and time) on a tamper-evident chain; approval.decided additionally carries the named decider. Segregation of duties is a separate MakerChecker control (runtime enforcement.sod_violation), not what this clause requires."
     },
     {
       "id": "14",
