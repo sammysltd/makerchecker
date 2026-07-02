@@ -21,9 +21,11 @@ description = "Known test fixtures, placeholders, and runtime-generated keys"
 paths = [
   '''packages/server/data/.*''',
 
-  # proof-verifier conformance vectors: public keys, Ed25519 signatures, and
-  # SHA-256 hashes over synthetic data. Not secrets; the private signing key is
-  # generated at build time and never committed (see
+  # proof-verifier conformance vectors: public keys, Ed25519 signatures,
+  # SHA-256 hashes over synthetic data, and the committed test-fixture signing
+  # key (test-fixture-signing-key.pem) that makes the corpus byte-reproducible.
+  # The fixture key is DELIBERATELY PUBLIC — a published test vector, never a
+  # secret, never used outside the corpus (see
   # packages/proof-verifier/scripts/build-vectors.mjs).
   '''packages/proof-verifier/vectors/.*''',
 ]
@@ -45,8 +47,9 @@ regexes = [
   # rather than a real bcrypt/argon2 hash.
   '''password_hash[^,]*,\s*['"]x['"]''',
 
-  # proof-verifier example public-key fingerprint (SHA-256 of the SPKI DER of a
-  # throwaway build-time key) shown in docs/CLI output. A public fingerprint,
-  # not a secret; matched by the generic-api-key rule via the nearby "key" word.
-  '''460b8ebb6806467bfc0613e15eedbe217f7ad34da3d426bb510449161e7e9af5''',
+  # proof-verifier example public-key fingerprint (SHA-256 of the SPKI DER of
+  # the committed, deliberately-public test-fixture signing key) shown in
+  # docs/CLI output. A public fingerprint, not a secret; matched by the
+  # generic-api-key rule via the nearby "key" word.
+  '''bb48c332185bcad29bb315a0da7592dbc7b15c04218e69454c8b228de7fc889d''',
 ]
