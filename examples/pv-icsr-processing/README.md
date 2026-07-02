@@ -60,19 +60,23 @@ reviewer confirms at the gate.
 
 ```bash
 docker compose up   # from the repo root; seeds everything on first boot
-export H='authorization: Bearer mk_...'   # admin key printed at first boot
+# First boot prints two keys, each shown once: a DEMO ADMIN API KEY and a
+# DEMO OFFICER API KEY. The admin triggers the run; the officer decides the gate.
+export H='authorization: Bearer mk_...'         # DEMO ADMIN API KEY (triggers the run)
+export OFFICER='authorization: Bearer mk_...'   # DEMO OFFICER API KEY (approves the medical-review gate)
 
 curl -X POST localhost:3000/api/flows/pv-icsr-processing/runs -H "$H" -H 'content-type: application/json' -d '{}'
 curl localhost:3000/api/approvals -H "$H"
-curl -X POST localhost:3000/api/approvals/<id>/decision -H "$H" \
+curl -X POST localhost:3000/api/approvals/<id>/decision -H "$OFFICER" \
   -H 'content-type: application/json' -d '{"decision":"approved","reason":"Seriousness and expectedness confirmed for P-4003 and P-4009; file 15-day expedited ICSRs per 21 CFR 314.80"}'
 curl localhost:3000/api/runs/<runId> -H "$H"
 curl localhost:3000/api/audit/verify -H "$H"
 ```
 
-Try to approve with the **same** key that triggered the run: you get a 403. The
-binding seriousness call and the E2B(R3) submission only run after a *different*,
-authenticated medical reviewer signs off.
+Try to approve with the **same** key that triggered the run (`-H "$H"`): you get
+a 403 (`forbid_requester`). The binding seriousness call and the E2B(R3)
+submission only run after a *different*, authenticated medical reviewer — the
+DEMO OFFICER API KEY here — signs off.
 
 Export the signed, offline-verifiable evidence for the run — every agent action,
 the high-risk skills held behind the gate, grant state, and the reviewer's

@@ -68,6 +68,18 @@ await governed.invoke({ statement: ["t1", "t2", "t3"] });
 
 See [`connectors/langchain/README.md`](connectors/langchain/README.md) for the walkthrough. The Claude Agent SDK wrapper (`governClaudeTool` from [`@makerchecker/connector-claude-agent`](../packages/connector-claude-agent)) is shown inline in [`middleware/README.md`](middleware/README.md).
 
+## Healthcare use-case demos (runnable)
+
+Two proxy-path demos for the healthcare use cases that have no seeded flow yet. Like the incident scenarios below, each `demo.mjs` configures its roles, skills, and grants, drives a governed agent through the proxy, shows the consequential act denied to the agent acting alone, then verifies the audit chain.
+
+- [`oncology-patient-access`](oncology-patient-access/) — Oncology patient access: the hub agent drafts benefits, funding stacks, and appeals; who signs the enrollment and the appeal
+- [`cro-cohort-identification`](cro-cohort-identification/) — CRO cohort identification: AI pre-screens against inclusion/exclusion criteria; the investigator signs the eligibility attestation
+
+```bash
+node examples/oncology-patient-access/demo.mjs      # server on :3000, auth disabled or admin key
+node examples/cro-cohort-identification/demo.mjs
+```
+
 ## Incident scenarios (runnable)
 
 Twenty real incidents where an AI or automated system took a consequential action it should not have. Each directory is a self-contained, runnable scenario: its `demo.mjs` configures the roles, skills, grants, and limits, drives a governed agent through the proxy, shows the control denying or gating the action, then verifies the audit chain. Each `README.md` keeps the incident's sources and the mapping.
