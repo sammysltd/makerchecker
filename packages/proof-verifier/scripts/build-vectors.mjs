@@ -5,27 +5,57 @@
  * producer uses (RFC 8785 canonical JSON + SHA-256 event hashes + an Ed25519
  * manifest signature), exports a full bundle and a run bundle, then derives a
  * set of tampered/forged variants with the verdict a conformant verifier must
- * return. The private signing key is generated here and discarded; only the
- * public key travels in the bundles (and is written out for pin-test cases).
+ * return.
+ *
+ * The corpus is DETERMINISTIC: two runs produce byte-identical output, so
+ * external implementers can pin the committed vector files by hash. Every
+ * input is fixed — timestamps and instance/run ids are constants, event UUIDs
+ * are derived from SHA-256 of a fixed namespace string plus a counter, and
+ * Ed25519 signing is deterministic by construction (RFC 8032). The signing
+ * key is the committed vectors/test-fixture-signing-key.pem: a PUBLISHED TEST
+ * FIXTURE for reproducible conformance vectors, deliberately public, never a
+ * secret, and never used outside this corpus (its seed is itself SHA-256 of
+ * "makerchecker-proof-verifier:test-fixture-signing-key:v1", so even the key
+ * is auditable). The attacker key for the wrong-key forgery is derived the
+ * same way from a second namespace string.
  *
  * Any implementation in any language can run these vectors and self-certify by
  * matching the verdicts in vectors/index.json.
  *
- * Re-generate with: npm run build:vectors
+ * Re-generate with: npm run build:vectors   (must be a no-op diff)
+ * An output directory may be passed as argv[2]; scripts/test.mjs uses that to
+ * regenerate into a temp dir and byte-compare against the committed corpus.
  */
 
-import { createHash, generateKeyPairSync, randomUUID, sign as edSign } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { createHash, createPrivateKey, createPublicKey, sign as edSign } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { canonicalJson } from "../src/canonical-json.js";
 
 const VECTORS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "vectors");
+const OUT_DIR = process.argv[2] ?? VECTORS_DIR;
 const SCHEMA_VERSION = 1;
 const GENESIS_PREFIX = "makerchecker-genesis:";
+const UUID_NAMESPACE = "makerchecker-proof-verifier:conformance-vectors:v1";
 
 const sha256Hex = (s) => createHash("sha256").update(s, "utf8").digest("hex");
+
+/** Deterministic UUIDv4-shaped id: SHA-256 of the fixed namespace + counter. */
+let uuidCounter = 0;
+function nextUuid() {
+  const h = createHash("sha256").update(`${UUID_NAMESPACE}:uuid:${uuidCounter++}`, "utf8").digest("hex");
+  const variant = ((parseInt(h[16], 16) & 0x3) | 0x8).toString(16);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+/** Ed25519 private key from a 32-byte seed (PKCS8 DER prefix + seed). */
+function keyFromSeed(seedLabel) {
+  const seed = createHash("sha256").update(seedLabel, "utf8").digest();
+  const der = Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), seed]);
+  return createPrivateKey({ key: der, format: "der", type: "pkcs8" });
+}
 
 function hashInput(e) {
   return {
@@ -104,18 +134,19 @@ function makeBundle(events, { bundleKind, instanceId, runId, privateKey, publicK
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 function main() {
-  mkdirSync(VECTORS_DIR, { recursive: true });
+  mkdirSync(OUT_DIR, { recursive: true });
 
   const instanceId = "11111111-1111-4111-8111-111111111111";
   const runId = "22222222-2222-4222-8222-222222222222";
   const otherRunId = "33333333-3333-4333-8333-333333333333";
 
-  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-  const publicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
+  // The committed, deliberately-public fixture key (see header comment).
+  const privateKey = createPrivateKey(readFileSync(join(VECTORS_DIR, "test-fixture-signing-key.pem"), "utf8"));
+  const publicKeyPem = createPublicKey(privateKey).export({ type: "spki", format: "pem" }).toString();
   // A second, unrelated instance key — used to forge an internally-valid bundle
   // signed by the wrong key (the case key pinning is designed to catch).
-  const attacker = generateKeyPairSync("ed25519");
-  const attackerPubPem = attacker.publicKey.export({ type: "spki", format: "pem" }).toString();
+  const attackerKey = keyFromSeed("makerchecker-proof-verifier:test-fixture-attacker-key:v1");
+  const attackerPubPem = createPublicKey(attackerKey).export({ type: "spki", format: "pem" }).toString();
 
   const t = (n) => `2026-06-12T09:${String(30 + n).padStart(2, "0")}:00.000Z`;
   const agent = { kind: "agent", id: "agent-0001", role: "case-processor" };
@@ -126,14 +157,14 @@ function main() {
   // named reviewer (not the requester) approves at a gate, then the gated skill
   // runs. Exactly the maker-checker story the audit chain exists to prove.
   const specs = [
-    { id: randomUUID(), occurred_at: t(0), actor: system, event_type: "audit.genesis", payload: { instanceId } },
-    { id: randomUUID(), occurred_at: t(1), actor: agent, event_type: "run.started", run_id: runId, entity_type: "flow_run", entity_id: runId, payload: { flow: "pv-icsr-processing" } },
-    { id: randomUUID(), occurred_at: t(2), actor: agent, event_type: "llm.call", run_id: runId, payload: { model: "claude", tokens: 412 } },
-    { id: randomUUID(), occurred_at: t(3), actor: agent, event_type: "enforcement.blocked", run_id: runId, payload: { code: "skill_not_granted", at: "decision", skill: "e2b-submit@1.0.0" } },
-    { id: randomUUID(), occurred_at: t(4), actor: agent, event_type: "approval.requested", run_id: runId, entity_type: "approval", entity_id: "appr-1", payload: { gate: "medical-review", skill: "e2b-submit@1.0.0" } },
-    { id: randomUUID(), occurred_at: t(5), actor: reviewer, event_type: "approval.decided", run_id: runId, entity_type: "approval", entity_id: "appr-1", payload: { decision: "approved", decider: "user-0009", reason: "Seriousness confirmed for P-4003; file 15-day expedited ICSR per 21 CFR 314.80" } },
-    { id: randomUUID(), occurred_at: t(6), actor: agent, event_type: "skill.invoked", run_id: runId, payload: { skill: "e2b-submit@1.0.0", outcome: "filed" } },
-    { id: randomUUID(), occurred_at: t(7), actor: agent, event_type: "run.completed", run_id: runId, entity_type: "flow_run", entity_id: runId, payload: { status: "completed" } },
+    { id: nextUuid(), occurred_at: t(0), actor: system, event_type: "audit.genesis", payload: { instanceId } },
+    { id: nextUuid(), occurred_at: t(1), actor: agent, event_type: "run.started", run_id: runId, entity_type: "flow_run", entity_id: runId, payload: { flow: "pv-icsr-processing" } },
+    { id: nextUuid(), occurred_at: t(2), actor: agent, event_type: "llm.call", run_id: runId, payload: { model: "claude", tokens: 412 } },
+    { id: nextUuid(), occurred_at: t(3), actor: agent, event_type: "enforcement.blocked", run_id: runId, payload: { code: "skill_not_granted", at: "decision", skill: "e2b-submit@1.0.0" } },
+    { id: nextUuid(), occurred_at: t(4), actor: agent, event_type: "approval.requested", run_id: runId, entity_type: "approval", entity_id: "appr-1", payload: { gate: "medical-review", skill: "e2b-submit@1.0.0" } },
+    { id: nextUuid(), occurred_at: t(5), actor: reviewer, event_type: "approval.decided", run_id: runId, entity_type: "approval", entity_id: "appr-1", payload: { decision: "approved", decider: "user-0009", reason: "Seriousness confirmed for P-4003; file 15-day expedited ICSR per 21 CFR 314.80" } },
+    { id: nextUuid(), occurred_at: t(6), actor: agent, event_type: "skill.invoked", run_id: runId, payload: { skill: "e2b-submit@1.0.0", outcome: "filed" } },
+    { id: nextUuid(), occurred_at: t(7), actor: agent, event_type: "run.completed", run_id: runId, entity_type: "flow_run", entity_id: runId, payload: { status: "completed" } },
   ];
 
   const events = buildChain(instanceId, specs);
@@ -166,7 +197,7 @@ function main() {
   // 5. A foreign-run event spliced in and the bundle RE-SIGNED so signature,
   //    count, digest and per-event hashes all pass: only the run_id binding
   //    catches it. (Demonstrates the run-bundle integrity guarantee.)
-  const foreignSpec = { id: randomUUID(), occurred_at: t(5), actor: agent, event_type: "skill.invoked", run_id: otherRunId, payload: { skill: "x" } };
+  const foreignSpec = { id: nextUuid(), occurred_at: t(5), actor: agent, event_type: "skill.invoked", run_id: otherRunId, payload: { skill: "x" } };
   const foreignEvent = { seq: "99", entity_type: null, entity_id: null, prev_hash: runEvents[2].hash, ...foreignSpec };
   foreignEvent.hash = eventHash(foreignEvent);
   const foreignEvents = [...runEvents.slice(0, 3), foreignEvent, ...runEvents.slice(3)];
@@ -174,7 +205,7 @@ function main() {
 
   // 6. A complete, internally-valid full bundle signed by the WRONG key. It
   //    PASSES on its own and FAILS only when the real key is pinned.
-  const wrongKey = makeBundle(events, { instanceId, privateKey: attacker.privateKey, publicKeyPem: attackerPubPem, exportedAt, bundleKind: "full", runId: null });
+  const wrongKey = makeBundle(events, { instanceId, privateKey: attackerKey, publicKeyPem: attackerPubPem, exportedAt, bundleKind: "full", runId: null });
 
   // 7. ill-formed-string: the last event's payload carries an unpaired
   //    surrogate (reachable in production via JSON.parse('{"note":"\ud800"}')).
@@ -189,7 +220,7 @@ function main() {
   const PLACEHOLDER = "__ILL_FORMED_STRING_PLACEHOLDER__";
   const illSpecs = [
     ...specs,
-    { id: randomUUID(), occurred_at: t(8), actor: agent, event_type: "note.recorded", run_id: runId, payload: { note: PLACEHOLDER } },
+    { id: nextUuid(), occurred_at: t(8), actor: agent, event_type: "note.recorded", run_id: runId, payload: { note: PLACEHOLDER } },
   ];
   const illEvents = buildChain(instanceId, illSpecs);
   const illLast = illEvents[illEvents.length - 1];
@@ -205,11 +236,11 @@ function main() {
   //    NFC/NFD pair and fail the hash).
   const unicodeSpecs = [
     ...specs,
-    { id: randomUUID(), occurred_at: t(8), actor: agent, event_type: "note.recorded", run_id: runId, payload: { emoji: "\u{1F600}", nfc: "\u00e9", nfd: "e\u0301" } },
+    { id: nextUuid(), occurred_at: t(8), actor: agent, event_type: "note.recorded", run_id: runId, payload: { emoji: "\u{1F600}", nfc: "\u00e9", nfd: "e\u0301" } },
   ];
   const unicodeLiteral = makeBundle(buildChain(instanceId, unicodeSpecs), { ...bundleArgs, bundleKind: "full", runId: null });
 
-  const write = (name, obj) => writeFileSync(join(VECTORS_DIR, name), JSON.stringify(obj, null, 2) + "\n");
+  const write = (name, obj) => writeFileSync(join(OUT_DIR, name), JSON.stringify(obj, null, 2) + "\n");
   write("valid-full.json", validFull);
   write("valid-run.json", validRun);
   write("tampered-payload.json", tamperedPayload);
@@ -220,7 +251,7 @@ function main() {
   write("wrong-key.json", wrongKey);
   write("ill-formed-string.json", illFormedString);
   write("unicode-literal.json", unicodeLiteral);
-  writeFileSync(join(VECTORS_DIR, "instance-pubkey.pem"), publicKeyPem);
+  writeFileSync(join(OUT_DIR, "instance-pubkey.pem"), publicKeyPem);
 
   const index = {
     schemaVersion: SCHEMA_VERSION,
@@ -240,9 +271,9 @@ function main() {
       { file: "ill-formed-string.json", expect: "fail", reasonCode: "ill_formed_string", reasonContains: "ill-formed string", note: "an event payload carries an unpaired surrogate: I-JSON (RFC 7493) spec violation, a verdict distinct from tamper" },
     ],
   };
-  writeFileSync(join(VECTORS_DIR, "index.json"), JSON.stringify(index, null, 2) + "\n");
+  writeFileSync(join(OUT_DIR, "index.json"), JSON.stringify(index, null, 2) + "\n");
 
-  process.stdout.write(`wrote ${index.cases.length} conformance cases to ${VECTORS_DIR}\n`);
+  process.stdout.write(`wrote ${index.cases.length} conformance cases to ${OUT_DIR}\n`);
 }
 
 main();

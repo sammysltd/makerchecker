@@ -8,15 +8,15 @@
     "count": 9,
     "firstSeq": "1",
     "lastSeq": "9",
-    "headHash": "fb01493b318206320b84c099d2266e8ad7085f596b80d935c8445a96ff7d0a4b",
-    "eventHashesDigest": "3205e98a3a3255d5795d41741c67ee0bb6431ae3684853712e177d468a171a5e",
-    "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAtAZrcPkaCk+v8mKz+NYQhe8V3qHlMnjwG5pzpSgYa18=\n-----END PUBLIC KEY-----\n",
-    "signature": "ri4+quLn/jxo7y5wH3kpuvgjxUrTU0oAslvpYnNvDYMIRpgvDYVTUcmwWYB7PyBwqPvlv75JDKkIZEzXEgFxCQ=="
+    "headHash": "9a23d215837d2e19556e417018b8e83789e1b81f8cfcc64e00ad5bca03f2ac71",
+    "eventHashesDigest": "31a92f7a4fee1335024cc2dd16e4ced7ba6d53b3ae83913648069b181e3432a9",
+    "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAH1eGT1F/ESccbTabFb3i4GXRNIxq2/0AM5oDPer735A=\n-----END PUBLIC KEY-----\n",
+    "signature": "X3IczezSknfMI7zWVGbK+k8CmbHiJkar03ZFzdb/hVRAcdJX8lDyAnjl9gpb/cPtnl8PMZKZ7M1XekN+7AufBw=="
   },
   "events": [
     {
       "seq": "1",
-      "id": "3a9cd439-910a-436d-befd-1c0bb76fd479",
+      "id": "2640a745-9299-4b8a-a340-af6153426186",
       "occurred_at": "2026-06-12T09:30:00.000Z",
       "actor": {
         "kind": "system",
@@ -30,11 +30,11 @@
         "instanceId": "11111111-1111-4111-8111-111111111111"
       },
       "prev_hash": "a3223803bd3572c34689d246ee3c15b0c385d9d092cf9c9450dff59c32bf0b30",
-      "hash": "9958ab1671c49af7902ec5dbaafdcb9d8603ab3b835fb7a6926b1fcd40c53a71"
+      "hash": "f59c98cee8208b5a10d2a8110577998deaba27c5c347c894be1a9ede634b7a14"
     },
     {
       "seq": "2",
-      "id": "a3bf4c66-cf44-4254-a2b6-df5ce312a3cf",
+      "id": "6d9c9a52-db93-4086-8126-ad5f72819d87",
       "occurred_at": "2026-06-12T09:31:00.000Z",
       "actor": {
         "kind": "agent",
@@ -48,12 +48,12 @@
       "payload": {
         "flow": "pv-icsr-processing"
       },
-      "prev_hash": "9958ab1671c49af7902ec5dbaafdcb9d8603ab3b835fb7a6926b1fcd40c53a71",
-      "hash": "2b54c3b14d6a65ca7f6c017c1284fc048fd469ba82cea60ae7da2f77412731fb"
+      "prev_hash": "f59c98cee8208b5a10d2a8110577998deaba27c5c347c894be1a9ede634b7a14",
+      "hash": "85e3db449a73180e1f0c84f344462cd4677d0e289b25e7e277f4e4f427406a86"
     },
     {
       "seq": "3",
-      "id": "99f2e17a-433f-4b10-bde3-63cab6f6ce8b",
+      "id": "6a737c65-9083-4c5e-92ba-d87d43475d9a",
       "occurred_at": "2026-06-12T09:32:00.000Z",
       "actor": {
         "kind": "agent",
@@ -68,12 +68,12 @@
         "model": "claude",
         "tokens": 412
       },
-      "prev_hash": "2b54c3b14d6a65ca7f6c017c1284fc048fd469ba82cea60ae7da2f77412731fb",
-      "hash": "015e435097136a3fa9455d4853beadff18fb3ce45d3056cccac07b9937ee44ad"
+      "prev_hash": "85e3db449a73180e1f0c84f344462cd4677d0e289b25e7e277f4e4f427406a86",
+      "hash": "ee0e9bd19743997d1478882b8d8eaec3819da1d22ef22e76f5cf071413525570"
     },
     {
       "seq": "4",
-      "id": "b49c97f6-905a-4ed6-bc6c-79052df12a77",
+      "id": "7a7e9eec-7e4c-4429-9671-7dda16282f35",
       "occurred_at": "2026-06-12T09:33:00.000Z",
       "actor": {
         "kind": "agent",
@@ -89,12 +89,12 @@
         "at": "decision",
         "skill": "e2b-submit@1.0.0"
       },
-      "prev_hash": "015e435097136a3fa9455d4853beadff18fb3ce45d3056cccac07b9937ee44ad",
-      "hash": "9ad04a2cc71b961a1a6f8239e4d5f0b3de823736df4606f9f4e3f939bff9786c"
+      "prev_hash": "ee0e9bd19743997d1478882b8d8eaec3819da1d22ef22e76f5cf071413525570",
+      "hash": "a6147e08156358587b20be441dd9e1da4d0964b3a45c370b018993479b26ef8f"
     },
     {
       "seq": "5",
-      "id": "31c20cde-7148-4c2c-a622-f07c5c363866",
+      "id": "71fdae4c-5307-4024-9980-c7fdafc12c21",
       "occurred_at": "2026-06-12T09:34:00.000Z",
       "actor": {
         "kind": "agent",
@@ -109,12 +109,12 @@
         "gate": "medical-review",
         "skill": "e2b-submit@1.0.0"
       },
-      "prev_hash": "9ad04a2cc71b961a1a6f8239e4d5f0b3de823736df4606f9f4e3f939bff9786c",
-      "hash": "57f8a59bafeae2f826d31629862688a46c1515a147a3e62702ba0fa4565b2a25"
+      "prev_hash": "a6147e08156358587b20be441dd9e1da4d0964b3a45c370b018993479b26ef8f",
+      "hash": "848224e63358fa3dac3bf73cbe6ed70353f0fe24cb51678f89a3efcfa6952697"
     },
     {
       "seq": "6",
-      "id": "e4669a21-bf23-4060-a4cd-1b5d5e08bf30",
+      "id": "e3f108c7-5eea-4150-9649-171ef0d4ab41",
       "occurred_at": "2026-06-12T09:35:00.000Z",
       "actor": {
         "kind": "user",
@@ -130,12 +130,12 @@
         "decider": "user-0009",
         "reason": "Seriousness confirmed for P-4003; file 15-day expedited ICSR per 21 CFR 314.80"
       },
-      "prev_hash": "57f8a59bafeae2f826d31629862688a46c1515a147a3e62702ba0fa4565b2a25",
-      "hash": "ca3a64bd883cbec2ddf11974f9f8fca1cebb732687e5c8f8277821ddec716709"
+      "prev_hash": "848224e63358fa3dac3bf73cbe6ed70353f0fe24cb51678f89a3efcfa6952697",
+      "hash": "1a5f78e76ba31561ec0c75a544e5960ea5c9644c276a9a0d82c8f737c7fbd627"
     },
     {
       "seq": "7",
-      "id": "cc4c6781-4f65-4a85-94d4-6f646c6525d9",
+      "id": "bf974483-6b4f-4a7b-8176-cbcee1a88ea4",
       "occurred_at": "2026-06-12T09:36:00.000Z",
       "actor": {
         "kind": "agent",
@@ -150,12 +150,12 @@
         "skill": "e2b-submit@1.0.0",
         "outcome": "filed"
       },
-      "prev_hash": "ca3a64bd883cbec2ddf11974f9f8fca1cebb732687e5c8f8277821ddec716709",
-      "hash": "1cbfd5cfada2d4a5b330f3e941c236f1ab3bd59cfba3ee9daf47eb032dd00515"
+      "prev_hash": "1a5f78e76ba31561ec0c75a544e5960ea5c9644c276a9a0d82c8f737c7fbd627",
+      "hash": "39afc6ffcc2d414812b139375bdc5beb791d9fa9b585ac677ecd25274b571a47"
     },
     {
       "seq": "8",
-      "id": "4154b87f-6db0-468e-b406-62374019d076",
+      "id": "87e805b8-e5d2-407f-92d2-571919fc936e",
       "occurred_at": "2026-06-12T09:37:00.000Z",
       "actor": {
         "kind": "agent",
@@ -169,12 +169,12 @@
       "payload": {
         "status": "completed"
       },
-      "prev_hash": "1cbfd5cfada2d4a5b330f3e941c236f1ab3bd59cfba3ee9daf47eb032dd00515",
-      "hash": "f5ab5d1e8308b03d7bec7ff95826980559cdfcf7fbd97caa574a7110c87503f2"
+      "prev_hash": "39afc6ffcc2d414812b139375bdc5beb791d9fa9b585ac677ecd25274b571a47",
+      "hash": "4c5e1a8a2c226d34de9774cd0e0a0883e2fc7963197d2c5eeb68e02d4474d46c"
     },
     {
       "seq": "9",
-      "id": "1e3374b2-b337-4354-a949-61dbf6189da9",
+      "id": "db805df4-8df0-4b88-be08-7eb13f033aa4",
       "occurred_at": "2026-06-12T09:38:00.000Z",
       "actor": {
         "kind": "agent",
@@ -190,8 +190,8 @@
         "nfc": "é",
         "nfd": "é"
       },
-      "prev_hash": "f5ab5d1e8308b03d7bec7ff95826980559cdfcf7fbd97caa574a7110c87503f2",
-      "hash": "fb01493b318206320b84c099d2266e8ad7085f596b80d935c8445a96ff7d0a4b"
+      "prev_hash": "4c5e1a8a2c226d34de9774cd0e0a0883e2fc7963197d2c5eeb68e02d4474d46c",
+      "hash": "9a23d215837d2e19556e417018b8e83789e1b81f8cfcc64e00ad5bca03f2ac71"
     }
   ]
 }

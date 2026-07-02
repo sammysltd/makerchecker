@@ -31,8 +31,8 @@ Exit code `0` = verified, `1` = failed, `2` = usage error.
 
 ```
 PASS  8 events, full chain (genesis-rooted)
-      head 0bcad691a02af97…edb3b0dfd200e68
-      key  sha256:460b8ebb…e7e9af5   (public-key fingerprint, abbreviated)
+      head 4c5e1a8a2c226d3…b68e02d4474d46c
+      key  sha256:bb48c332…7fc889d   (public-key fingerprint, abbreviated)
 ```
 
 ## Browser
@@ -112,9 +112,20 @@ each with the verdict a conformant verifier must return in
 [`vectors/index.json`](./vectors/index.json). Any implementation in any language
 can run these and self-certify.
 
+The corpus is **deterministic and frozen**: external implementers can pin the
+committed vector files by hash. Regeneration is byte-reproducible — every
+timestamp and id is a fixed constant, event UUIDs are derived from SHA-256 of
+a fixed namespace string, and the bundles are signed with the committed
+[`vectors/test-fixture-signing-key.pem`](./vectors/test-fixture-signing-key.pem),
+a **deliberately public** test fixture (never a secret, never used outside this
+corpus; see the header of
+[`scripts/build-vectors.mjs`](./scripts/build-vectors.mjs)). `npm test`
+regenerates into a temp directory and fails on any byte diff against the
+committed files, so the corpus cannot drift silently.
+
 ```bash
-npm test            # rebuilds the vectors and asserts every verdict
-npm run build:vectors
+npm test            # byte-compares a fresh regeneration, then asserts every verdict
+npm run build:vectors   # regenerate in place (must be a no-op diff)
 ```
 
 The reimplementation here is cross-checked to be **byte-identical** to the
