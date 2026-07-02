@@ -1,0 +1,39 @@
+{
+  "id": "AID-2025-0012",
+  "slug": "google-gemini-cli-hallucinated-file-move-destroyed-project",
+  "title": "Google Gemini CLI hallucinated a successful mkdir and overwrote a user's project files",
+  "incidentYear": 2025,
+  "incidentDateText": "July 2025",
+  "category": "data-loss",
+  "severity": "high",
+  "oneLineSummary": "Google Gemini CLI ran a file-move operation based on a hallucinated successful directory creation, sequentially overwriting a user's files until only one survived.",
+  "whatHappened": "On July 21, 2025, a user named Anuraag Gupta (a product manager testing Gemini CLI against Claude Code) filed GitHub issue #4586 on the official google-gemini/gemini-cli repository, reporting that the tool had destroyed files in his project. The environment was Gemini CLI v0.1.13, model gemini-2.5-pro, on Windows (win32) using OAuth. Gupta asked the agent to rename a directory and move its contents into a new sub-directory. Gemini ran a mkdir command that failed silently so the destination folder was never created, but the model interpreted the command as successful. On Windows, a move command targeting a non-existent destination renames the source instead, so each file was sequentially renamed to the same target name, overwriting the previous file until only the last file survived. The model never performed a read-after-write check to confirm the destination directory existed before proceeding. After the failure, Gemini output: \"I have failed you completely and catastrophically. My review of the commands confirms my gross incompetence.\" The GitHub issue was closed as not planned. The event was independently catalogued in the AI Incident Database as Incident 1178, and occurred roughly one week after a separate Replit AI data-loss event that is often cited alongside it.",
+  "agentAction": "The Gemini CLI agent autonomously executed file system commands (a mkdir followed by move operations) to rename a directory and relocate its contents. It acted on a hallucinated belief that the mkdir had succeeded, then ran move commands that overwrote the user's files one by one without any confirmation that the destination existed.",
+  "irreversibleEffect": "Multiple project files were permanently overwritten into a single surviving file and could not be recovered; the original contents were destroyed.",
+  "rootCause": "The model assumed a silently failing mkdir command had succeeded and performed no read-after-write verification that the destination directory existed. Because on Windows a move to a non-existent destination renames the source, each subsequent move overwrote the prior file. The agent executed destructive file operations without validating intermediate state.",
+  "controlsThatBlock": [
+    "high_risk_requires_gate",
+    "approval_gate"
+  ],
+  "makercheckerRefusal": "The destructive commands were executed autonomously by the agent, not by a human. A maker-checker or approval gate on file-mutating operations would have to intercept the move commands before execution and require confirmation of the destination state (a read-after-write check on the mkdir result) or human approval before overwriting files. Because the model hallucinated success and there was no independent verification step, nothing checked the maker's work before the irreversible overwrite. This is a genuine automated action, so an approval gate on destructive file operations would have been the relevant blocking control had one existed.",
+  "sources": [
+    {
+      "title": "GitHub issue #4586, google-gemini/gemini-cli",
+      "url": "https://github.com/google-gemini/gemini-cli/issues/4586"
+    },
+    {
+      "title": "Google's Gemini CLI Deletes User Files, Confesses Catastrophic Failure (WinBuzzer)",
+      "url": "https://winbuzzer.com/2025/07/26/googles-gemini-cli-deletes-user-files-confesses-catastrophic-failure-xcxwbn/"
+    },
+    {
+      "title": "Google Gemini AI Hallucinates Commands, Deletes Expert's Files (WebProNews)",
+      "url": "https://www.webpronews.com/google-gemini-ai-hallucinates-commands-deletes-experts-files-takes-the-blame/"
+    },
+    {
+      "title": "AI Incident Database, Incident 1178",
+      "url": "https://incidentdatabase.ai/cite/1178/"
+    }
+  ],
+  "reproPath": "examples/google-gemini-cli-hallucinated-file-move-destroyed-project",
+  "reproducible": false
+}

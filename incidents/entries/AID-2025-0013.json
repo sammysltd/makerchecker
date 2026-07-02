@@ -1,0 +1,39 @@
+{
+  "id": "AID-2025-0013",
+  "slug": "postmark-mcp-backdoor-bcc-email-exfiltration-2025",
+  "title": "Malicious postmark-mcp npm package silently BCCs AI-agent emails to attacker",
+  "incidentYear": 2025,
+  "incidentDateText": "September 2025",
+  "category": "data-exfiltration",
+  "severity": "high",
+  "oneLineSummary": "A copycat npm MCP server for Postmark added a hidden BCC in version 1.0.16 that silently copied every email sent by connected AI agents to an attacker-controlled address.",
+  "whatHappened": "The npm package postmark-mcp was a Model Context Protocol (MCP) server that let AI agents send email through Postmark. It was legitimate through its first 15 versions, replicating code from Postmark/ActiveCampaign's public GitHub repository. In version 1.0.16 a third-party publisher added a single malicious line (around line 231) that inserted a BCC on every outbound email, silently copying it to the attacker address phan@giftshop[.]club. Any AI agent or workflow wired to the MCP server therefore sent a hidden copy of each message, which could include content such as invoices, password resets, API keys, and internal mail. Koi Security researcher Idan Dardikman discovered and disclosed the backdoor on September 25, 2025, describing it as the first publicly documented in-the-wild malicious MCP server. The package had roughly 1,643 total downloads (about 1,500 per week); Koi estimated around 20 percent of installs ran in production, yielding a rough figure of about 300 potentially affected organizations. That number is Koi's download-based estimate, not a confirmed victim count. This was not Postmark's official server but a copycat: Postmark/ActiveCampaign stated it had absolutely nothing to do with the package, was not breached, and knew of only one actual Postmark customer using the affected package. After discovery the author removed the package from npm, but already-deployed installations remained compromised because the malicious code ran inside each user's own deployment.",
+  "agentAction": "The MCP server, invoked by users' AI agents to send email, automatically added a hidden BCC to every message and transmitted a copy to the attacker. The exfiltration was performed by the automated tool acting on the agent's send calls, without any human in the loop reviewing recipients.",
+  "irreversibleEffect": "Every email sent through the compromised MCP server, potentially including invoices, password resets, API keys, and internal correspondence, was silently copied to an attacker-controlled inbox. Once sent, those messages could not be recalled, and installs already deployed stayed compromised after the package was pulled from npm.",
+  "rootCause": "A copycat MCP server was published to npm using code cloned from a legitimate vendor repository, then a later version (1.0.16) added a single malicious BCC line. Users trusted and installed the third-party package without pinning versions, reviewing the diff between updates, or restricting where the tool could send data, so the AI agents granted it unmonitored authority to send email.",
+  "controlsThatBlock": [
+    "skill_not_granted",
+    "sod_violation"
+  ],
+  "makercheckerRefusal": "The exfiltration was carried out by an automated tool, not a human, so a maker-checker control could plausibly have applied. In a maker-checker model the send-email capability (maker) would be separated from an independent egress check (checker) that validates recipients, including BCC fields, against an allowlist before dispatch, which would have flagged the unexpected phan@giftshop[.]club address. Governance over which MCP servers/tools an agent may load, with pinned and reviewed versions, would also have gated the untrusted 1.0.16 update. These are hypothetical mitigations; no such control existed here, and the malicious BCC was applied silently on every send.",
+  "sources": [
+    {
+      "title": "Koi Security: postmark-mcp npm malicious backdoor email theft",
+      "url": "https://www.koi.ai/blog/postmark-mcp-npm-malicious-backdoor-email-theft"
+    },
+    {
+      "title": "The Hacker News: First malicious MCP server found",
+      "url": "https://thehackernews.com/2025/09/first-malicious-mcp-server-found.html"
+    },
+    {
+      "title": "The Register: Postmark MCP server code hijacked",
+      "url": "https://www.theregister.com/2025/09/29/postmark_mcp_server_code_hijacked/"
+    },
+    {
+      "title": "Snyk: Malicious MCP server on npm postmark-mcp harvests emails",
+      "url": "https://snyk.io/blog/malicious-mcp-server-on-npm-postmark-mcp-harvests-emails/"
+    }
+  ],
+  "reproPath": "examples/postmark-mcp-backdoor-bcc-email-exfiltration-2025",
+  "reproducible": false
+}

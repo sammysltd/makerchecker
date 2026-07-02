@@ -1,0 +1,35 @@
+{
+  "id": "AID-2024-0001",
+  "slug": "choice-home-warranty-chatbot-3000-ac-payout-2024",
+  "title": "Choice Home Warranty AI chatbot committed a $3,000 AC payout the company had not authorized",
+  "incidentYear": 2024,
+  "incidentDateText": "September 2024",
+  "category": "binding-commitment",
+  "severity": "medium",
+  "oneLineSummary": "Choice Home Warranty's customer-service chatbot agreed in writing to a $3,000 maximum cash payout toward an air conditioner replacement, a commitment the company initially disowned and honored only after a TV news investigation.",
+  "whatHappened": "In September 2024, Robert Brown of Draper, Utah interacted with the AI chatbot on the website of Choice Home Warranty, a New Jersey-based home warranty company, regarding an air conditioner claim. Brown asked, \"Can I just get the maximum payout of $3,000.00 and I will order and get it installed myself,\" and the chatbot replied, \"We will proceed with the payout option of $3,000.00 as per your request.\" Choice Home Warranty initially refused to honor the offer, with a company representative saying, \"We've had this AI up for about a week and it's really confusing and it's miscommunicating to people.\" After KSL Investigates (the \"Get Gephardt\" segment) contacted the company on Brown's behalf, Choice Home Warranty agreed to honor the chatbot's offer and Brown received his check. Utah Division of Consumer Protection director Katie Hass noted that \"'The chatbot did it' is not going to be an excuse when it comes to deceptive acts.\"",
+  "agentAction": "The AI chatbot stated in writing, under the company's name, that it would proceed with a $3,000 payout to the customer. The chatbot made the promise but did not itself disburse any funds. The company initially declined to pay, and a human at Choice Home Warranty ultimately authorized and sent the check only after KSL Investigates intervened.",
+  "irreversibleEffect": "A written promise of a $3,000 payout was made to the customer under the company's name. Once publicized, the commitment could not easily be walked back without reputational and potential consumer-protection consequences, and the company ultimately paid the $3,000.",
+  "rootCause": "A newly deployed customer-service chatbot (live for about a week) was given customer-facing latitude to state claim outcomes without guardrails or human review, and it agreed to a payout figure it had no authority to commit. The company itself described the tool as \"confusing\" and \"miscommunicating to people.\"",
+  "controlsThatBlock": [
+    "approval_gate",
+    "high_risk_requires_gate"
+  ],
+  "makercheckerRefusal": "The chatbot only generated a promise; a human ultimately authorized the actual payout, so no automated disbursement occurred that a control could have blocked. Framed as a hypothetical: a maker-checker gate should have prevented the bot (the maker) from stating a binding claim outcome to a customer at all. Committing a specific dollar payout is a high-risk action that should require a human checker to approve before the figure is communicated. Such a gate would have stopped the chatbot from ever generating the $3,000 promise, avoiding the reputational bind and the \"the chatbot did it\" defense the company was forced into.",
+  "sources": [
+    {
+      "title": "KSL Investigates: What is a company's obligation when AI chatbot makes a promise that can't be kept?",
+      "url": "https://www.ksl.com/article/51137100/what-is-a-companys-obligation-when-ai-chatbot-makes-a-promise-that-cant-be-kept"
+    },
+    {
+      "title": "Get Gephardt: What is a company's obligation to customers when its AI chatbot makes a promise that can't be kept?",
+      "url": "https://www.ksl.com/article/ksl-investigates/get-gephardt/what-is-a-companys-obligation-to-customers-when-its-ai-chatbot-makes-a-promise-that-cant-be-kept/684992/"
+    },
+    {
+      "title": "Moneywise/Yahoo Finance: Home warranty company refused to pay after its AI chatbot made a promise",
+      "url": "https://finance.yahoo.com/news/home-warranty-company-refused-pay-103900652.html"
+    }
+  ],
+  "reproPath": "examples/choice-home-warranty-chatbot-3000-ac-payout-2024",
+  "reproducible": false
+}

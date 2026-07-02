@@ -120,9 +120,14 @@ function readmeMarkdown(entries) {
   // Pre-LLM / non-agent cases kept as precedents: same failure mode, older or
   // non-AI system. Labeled so the catalogue's scope is honest.
   const PRECEDENTS = new Set([
+    "AID-2010-0001", // 2010 Flash Crash
     "AID-2012-0001", // Knight Capital
     "AID-2013-0001", // Everbright
     "AID-2015-0001", // Robodebt
+    "AID-2015-0002", // Michigan MiDAS
+    "AID-2020-0001", // Robert Williams facial recognition
+    "AID-2021-0001", // Dutch childcare benefits
+    "AID-2021-0002", // Zillow Offers
     "AID-2022-0003", // Citigroup fat-finger
   ]);
   const rows = entries
@@ -154,7 +159,7 @@ copy, the canonical reference is not.
 - **Machine-readable registry:** [index.json](index.json)
 - **Entry schema:** [schema.json](schema.json)
 - **Add or correct an incident:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **${entries.length} incidents** currently catalogued, all reproducible.
+- **${entries.length} incidents** currently catalogued, each with primary sources; many carry a runnable reproduction, and the rest are open for one.
 
 ## Scope
 

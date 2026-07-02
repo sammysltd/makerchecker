@@ -1,0 +1,31 @@
+{
+  "id": "AID-2024-0002",
+  "slug": "evicore-the-dial-prior-authorization-algorithm",
+  "title": "eviCore \"the dial\" prior-authorization algorithm tuned to increase insurance denials",
+  "incidentYear": 2024,
+  "incidentDateText": "October 2024 (investigation published; practices ongoing since at least 2021)",
+  "category": "wrongful-automated-decision",
+  "severity": "high",
+  "oneLineSummary": "eviCore, a Cigna-owned prior-authorization contractor serving about 100 million people, used an AI-backed algorithm insiders call \"the dial\" as the first screen on coverage requests and could tune it to route more requests to human reviewers to raise denial rates.",
+  "whatHappened": "A joint ProPublica and Capitol Forum investigation published October 23, 2024 reported that eviCore, a prior-authorization contractor owned by Cigna's Evernorth health-services division and serving roughly 100 million consumers (about 1 in 3 insured Americans) through contracts with insurers including UnitedHealthcare, Aetna, and Blue Cross Blue Shield plans, used an AI-backed proprietary algorithm that insiders call \"the dial\" as the first step in evaluating prior-authorization requests. The algorithm can automatically approve requests but cannot deny them; when it flags a problem it routes the request to in-house nurses and doctors, and only a doctor issues a final denial. Five former employees said eviCore could adjust the algorithm to send more requests to human review, raising the chance of denial, describing it as the game they would play. eviCore salespeople boasted of a 15% increase in denials to insurer clients, and the company marketed a 3-to-1 return on investment (three dollars saved per dollar spent), with some risk-based contracts letting it keep savings below a spending baseline, creating a direct financial incentive to deny care. In Arkansas, which mandates publishing denial rates, eviCore denied prior-auth requests in full or part nearly 20% of the time since 2021, versus about 7% for federal Medicare Advantage plans in 2022. CNN independently reported the same findings on November 7, 2024.",
+  "agentAction": "The AI algorithm (\"the dial\") auto-approved some prior-authorization requests and flagged others for human review, but by design it could not itself issue a denial. The consequential action, the final coverage denial, was taken by an eviCore doctor. The reported harm came from the company tuning the algorithm's sensitivity to push more requests into human review, which increased the volume and rate of denials issued downstream.",
+  "irreversibleEffect": "Patients were denied prior authorization for medical care (in Arkansas, nearly 20% of requests denied in full or part since 2021), delaying or blocking treatment. Denied or delayed care can be effectively irreversible for the affected patient even when denials are later appealed.",
+  "rootCause": "A financial incentive structure (a marketed 3-to-1 ROI, salespeople touting a 15% denial increase, and risk-based contracts that let eviCore keep savings below a spending baseline) drove the company to configure an automated screening algorithm to route more requests to human reviewers, systematically raising denial rates. The automation set the conditions for the outcome even though a human made the final decision.",
+  "controlsThatBlock": [
+    "approval_gate",
+    "sod_violation"
+  ],
+  "makercheckerRefusal": "A maker-checker control would not have blocked this. The system already had the structural form of one: the algorithm (maker) could only approve or flag, and a human doctor (checker) issued every final denial. The failure was not a missing human gate but a conflicted one. The checker and the tunable maker sat inside the same firm, which had a direct financial incentive to deny, so the \"check\" was aligned with the harm rather than against it. Framed as a hypothetical, an effective control here would require separation of duties between the party benefiting financially from denials and the party reviewing them, plus limits on adjusting the algorithm's routing threshold for cost reasons. The final action was taken by humans, so no automated gate was bypassed.",
+  "sources": [
+    {
+      "title": "ProPublica / Capitol Forum \u2014 \"Not Medically Necessary\": Inside the Company Helping America's Biggest Health Insurers Deny Coverage for Care",
+      "url": "https://www.propublica.org/article/evicore-health-insurance-denials-cigna-unitedhealthcare-aetna-prior-authorizations"
+    },
+    {
+      "title": "CNN \u2014 coverage of the ProPublica/Capitol Forum eviCore investigation",
+      "url": "https://www.cnn.com/2024/11/07/health/evi-care-insurance-company-denials-propublica"
+    }
+  ],
+  "reproPath": "examples/evicore-the-dial-prior-authorization-algorithm",
+  "reproducible": false
+}
