@@ -117,7 +117,7 @@
       "year": 2026,
       "category": "data-loss",
       "severity": "critical",
-      "oneLineSummary": "A Cursor AI agent working on a staging task invoked volumeDelete using an over-privileged Railway token, destroying PocketOS's production database and its co-located backups in nine seconds; Railway restored the production data within about an hour, and full resolution took roughly 30 hours.",
+      "oneLineSummary": "A Cursor AI agent working on a staging task invoked volumeDelete using an over-privileged Railway token, destroying PocketOS's production database and its co-located backups in nine seconds; accounts of the recovery differ, from a partial restore to days of manual rebuilding and permanent loss of recent data.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate",
@@ -486,7 +486,7 @@
     {
       "id": "AID-2022-0003",
       "slug": "citigroup-444b-fat-finger-overridable-warning",
-      "title": "Citigroup $444B Basket: Hard Blocks Caught ~$255B, No Notional Ceiling on the Rest",
+      "title": "Citigroup $444B Basket: Hard Blocks Caught ~$248B, No Notional Ceiling on the Rest",
       "date": "May 2, 2022",
       "year": 2022,
       "category": "unauthorized-financial-action",

@@ -44,7 +44,7 @@ entry says that too.
 | [`AID-2023-0003`](entries/AID-2023-0003.md) | November 2023 | UnitedHealth nH Predict Denied Medicare Post-Acute Care Without Clinician Authorization | Wrongful automated decision | critical |
 | [`AID-2023-0002`](entries/AID-2023-0002.md) | 2023 | Attorneys filed ChatGPT-hallucinated case citations to federal court | Fabrication | high |
 | [`AID-2023-0001`](entries/AID-2023-0001.md) | December 18, 2023 | Chevrolet of Watsonville: Prompt-Injected Chatbot Agreed in Conversation to Sell a Vehicle for $1 | Binding commitment | high |
-| [`AID-2022-0003`](entries/AID-2022-0003.md) | May 2, 2022 | Citigroup $444B Basket: Hard Blocks Caught ~$255B, No Notional Ceiling on the Rest _(precedent)_ | Unauthorized financial action | critical |
+| [`AID-2022-0003`](entries/AID-2022-0003.md) | May 2, 2022 | Citigroup $444B Basket: Hard Blocks Caught ~$248B, No Notional Ceiling on the Rest _(precedent)_ | Unauthorized financial action | critical |
 | [`AID-2022-0002`](entries/AID-2022-0002.md) | 2022 | Cigna PxDx Batch Rubber-Stamp Denials | Binding commitment | critical |
 | [`AID-2022-0001`](entries/AID-2022-0001.md) | November 2022 | Air Canada Held Liable for Chatbot's Misstated Bereavement Refund Policy | Binding commitment | high |
 | [`AID-2015-0001`](entries/AID-2015-0001.md) | 2015-2019 | Australia Robodebt: Unlawful Automated Welfare Debt Calculation _(precedent)_ | Wrongful automated decision | critical |
