@@ -117,10 +117,23 @@ function indexJson(entries) {
 }
 
 function readmeMarkdown(entries) {
+  // Pre-LLM / non-agent cases kept as precedents: same failure mode, older or
+  // non-AI system. Labeled so the catalogue's scope is honest.
+  const PRECEDENTS = new Set([
+    "AID-2010-0001", // 2010 Flash Crash
+    "AID-2012-0001", // Knight Capital
+    "AID-2013-0001", // Everbright
+    "AID-2015-0001", // Robodebt
+    "AID-2015-0002", // Michigan MiDAS
+    "AID-2020-0001", // Robert Williams facial recognition
+    "AID-2021-0001", // Dutch childcare benefits
+    "AID-2021-0002", // Zillow Offers
+    "AID-2022-0003", // Citigroup fat-finger
+  ]);
   const rows = entries
     .map(
       (e) =>
-        `| [\`${e.id}\`](entries/${e.id}.md) | ${e.incidentDateText} | ${e.title.replace(/\|/g, "\\|")} | ${CATEGORY_LABEL[e.category] ?? e.category} | ${e.severity} |`,
+        `| [\`${e.id}\`](entries/${e.id}.md) | ${e.incidentDateText} | ${e.title.replace(/\|/g, "\\|")}${PRECEDENTS.has(e.id) ? " _(precedent)_" : ""} | ${CATEGORY_LABEL[e.category] ?? e.category} | ${e.severity} |`,
     )
     .join("\n");
 
@@ -146,7 +159,18 @@ copy, the canonical reference is not.
 - **Machine-readable registry:** [index.json](index.json)
 - **Entry schema:** [schema.json](schema.json)
 - **Add or correct an incident:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **${entries.length} incidents** currently catalogued, all reproducible.
+- **${entries.length} incidents** currently catalogued, each with primary sources; many carry a runnable reproduction, and the rest are open for one.
+
+## Scope
+
+This catalogue covers incidents where an automated system took a consequential
+action a human should have owned and could not take back. The core is AI-agent
+failures. A few older cases, for example Knight Capital in 2012 and Robodebt in
+2015, are included as precedents and marked \`_(precedent)_\` in the table below,
+because the failure mode is the same even though the system was not an LLM agent.
+Where an incident was a researcher proof-of-concept that was fixed before real
+harm, the entry says so. Where a human, not the agent, took the final action, the
+entry says that too.
 
 ## Incidents
 

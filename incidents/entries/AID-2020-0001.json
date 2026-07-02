@@ -1,0 +1,35 @@
+{
+  "id": "AID-2020-0001",
+  "slug": "robert-williams-detroit-facial-recognition-wrongful-arrest-2020",
+  "title": "Robert Williams wrongfully arrested after Detroit facial recognition false match",
+  "incidentYear": 2020,
+  "incidentDateText": "January 2020",
+  "category": "wrongful-automated-decision",
+  "severity": "high",
+  "oneLineSummary": "A facial recognition system falsely matched Robert Williams to surveillance footage of a store theft, leading Detroit police to wrongfully arrest and detain him for about 30 hours.",
+  "whatHappened": "In January 2020, Detroit police arrested Robert Williams outside his home in front of his family and held him in detention for roughly 30 hours. The arrest stemmed from an investigation into a 2018 watch theft at a Shinola store in Detroit. Detroit police took a blurry, low-quality still image from the store's surveillance video and ran it through a Michigan State Police facial recognition system, which falsely matched the footage to Williams' expired driver's-license photo. Williams was not the man in the footage and was not near the store. This is the first publicly reported instance in the US of a false facial recognition match leading to a wrongful arrest. The ACLU sued the City of Detroit on Williams' behalf. The case was settled on June 28, 2024, with the city paying $300,000 and adopting policy reforms, including a requirement that facial recognition results be corroborated with independent evidence before an arrest, training on the technology's higher misidentification rates for people of color, and an audit of all cases since 2017 in which facial recognition was used to obtain arrest warrants.",
+  "agentAction": "An automated facial recognition system produced a false match between low-quality surveillance footage and Williams' driver's-license photo. That match was used to identify him as a suspect. The arrest and roughly 30-hour detention were carried out by Detroit police officers acting on the match; the automated system did not itself take the enforcement action.",
+  "irreversibleEffect": "Williams was arrested in front of his family and detained for approximately 30 hours based on a false identification.",
+  "rootCause": "A blurry, low-quality surveillance still was run through facial recognition and returned a false match to Williams' expired driver's-license photo. Officers acted on the unverified match without corroborating it against independent evidence, and the technology carries higher misidentification rates for people of color.",
+  "controlsThatBlock": [
+    "approval_gate",
+    "high_risk_requires_gate"
+  ],
+  "makercheckerRefusal": "The consequential action here, the arrest and detention, was taken by human police officers, not by an automated system, so no automated control blocked it and this framing is hypothetical. A maker-checker style control would require the facial recognition match (the maker) to be independently corroborated by other evidence before a warrant or arrest (the checker) could proceed. That is essentially the reform Detroit later adopted: face-recognition results must be confirmed with independent evidence before an arrest. Such a gate, had it existed in January 2020, could have caught the false match before Williams was arrested.",
+  "sources": [
+    {
+      "title": "Williams v. City of Detroit (ACLU case page)",
+      "url": "https://www.aclu.org/cases/williams-v-city-of-detroit-face-recognition-false-arrest"
+    },
+    {
+      "title": "'It didn't make sense at all': Wrongful facial recognition arrest leads to landmark settlement (Michigan Public)",
+      "url": "https://www.michiganpublic.org/criminal-justice-legal-system/2024-06-28/it-didnt-make-sense-at-all-wrongful-facial-recognition-arrest-leads-to-landmark-settlement"
+    },
+    {
+      "title": "Detroit Takes Important Step in Curbing the Harms of Face Recognition Technology (EFF)",
+      "url": "https://www.eff.org/deeplinks/2024/07/detroit-takes-important-step-curbing-harms-face-recognition-technology"
+    }
+  ],
+  "reproPath": "examples/robert-williams-detroit-facial-recognition-wrongful-arrest-2020",
+  "reproducible": false
+}

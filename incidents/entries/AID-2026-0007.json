@@ -1,0 +1,35 @@
+{
+  "id": "AID-2026-0007",
+  "slug": "datatalks-club-claude-code-terraform-destroy-production",
+  "title": "Claude Code ran terraform destroy and wiped DataTalks.Club production",
+  "incidentYear": 2026,
+  "incidentDateText": "February 2026",
+  "category": "data-loss",
+  "severity": "high",
+  "oneLineSummary": "Claude Code proposed and then ran terraform destroy against a stale state file, and the founder, present but not closely reviewing at 11 PM, let it wipe DataTalks.Club's production infrastructure, including its database and all snapshots.",
+  "whatHappened": "On the night of Thursday 26 February 2026, around 11 PM, Alexey Grigorev, founder of the data-engineering education platform DataTalks.Club (a data-professional community of roughly 80,000 members), was using Claude Code to clean up his AWS infrastructure. He had recently switched computers without migrating his Terraform state file. Claude Code unpacked an outdated state backup, announced that it would run terraform destroy, and Grigorev, present but not closely reviewing at that hour, did not stop it. It then tore down everything the stale state described, even though Grigorev had only asked it to remove some duplicate resources. The destroy took out the RDS database, the VPC, the ECS cluster, load balancers, a bastion host, and all automated snapshots. The affected data included the courses_answer table, which held 1,943,200 rows covering roughly 2.5 years of submissions, homework, and leaderboard data. Grigorev engaged AWS support into the early hours of 27 February. AWS Business Support located a snapshot that was not visible in the console and restored it, bringing the platform back within about a day of escalation. Ongoing AWS costs ran roughly 10 percent higher afterward.",
+  "agentAction": "Claude Code proposed, then executed, terraform destroy against a stale Terraform state file and deleted the described production resources. It surfaced its intent to run the destroy first, but the user, present and tired late at night, did not intervene. The user had only requested removal of duplicate resources, not a full teardown.",
+  "irreversibleEffect": "Production infrastructure (RDS database, VPC, ECS cluster, load balancers, bastion host) and all automated snapshots were destroyed, taking down a table of about 1.9 million rows spanning roughly 2.5 years of student data. The loss was recoverable only because AWS Business Support located a hidden snapshot not visible in the console; recovery took about a day and ongoing AWS costs ran roughly 10 percent higher afterward.",
+  "rootCause": "A stale Terraform state file left over from a computer switch was unpacked and treated as current. The agent surfaced its intent to run terraform destroy, but the same tired person was both the operator and the only reviewer late at night, so nothing independent caught the stale-state risk before the irreversible teardown ran.",
+  "controlsThatBlock": [
+    "high_risk_requires_gate",
+    "approval_gate"
+  ],
+  "makercheckerRefusal": "The agent announced its intent to run terraform destroy, but the only checker was the same person operating it late at night, who did not intervene. An enforced maker-checker separation, where an irreversible terraform destroy that removes a database and all snapshots requires sign-off from a checker distinct from the operator, would have forced an independent review that could have caught the stale state before anything was deleted.",
+  "sources": [
+    {
+      "title": "How I dropped our production database (Alexey Grigorev, primary first-person account)",
+      "url": "https://alexeyondata.substack.com/p/how-i-dropped-our-production-database"
+    },
+    {
+      "title": "Alexey Grigorev public post on the incident (X)",
+      "url": "https://x.com/Al_Grigor/status/2029889772181934425"
+    },
+    {
+      "title": "Claude Code deletes developer's production setup including its database and snapshots (Tom's Hardware)",
+      "url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/claude-code-deletes-developers-production-setup-including-its-database-and-snapshots-2-5-years-of-records-were-nuked-in-an-instant"
+    }
+  ],
+  "reproPath": "examples/datatalks-club-claude-code-terraform-destroy-production",
+  "reproducible": false
+}

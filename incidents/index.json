@@ -9,8 +9,109 @@
     "controlsThatBlock",
     "reproPath"
   ],
-  "count": 20,
+  "count": 41,
   "entries": [
+    {
+      "id": "AID-2026-0008",
+      "slug": "shareleak-copilot-studio-prompt-injection-cve-2026-21520",
+      "title": "ShareLeak: indirect prompt injection in Microsoft Copilot Studio exfiltrates customer records (CVE-2026-21520)",
+      "date": "2026 (discovered Nov 2025, patched Jan 2026, disclosed Apr 2026)",
+      "year": 2026,
+      "category": "data-exfiltration",
+      "severity": "high",
+      "oneLineSummary": "An indirect prompt injection flaw in Microsoft Copilot Studio let an unauthenticated attacker plant instructions in a public SharePoint form field that hijacked an AI agent into emailing connected customer records to an attacker address.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "sod_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/shareleak-copilot-studio-prompt-injection-cve-2026-21520",
+      "page": "entries/AID-2026-0008.md",
+      "sources": [
+        {
+          "title": "NVD - CVE-2026-21520",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-21520"
+        },
+        {
+          "title": "Microsoft Security Response Center advisory - CVE-2026-21520",
+          "url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-21520"
+        },
+        {
+          "title": "Capsule Security - ShareLeak: Taking the Wheel of Microsoft's Copilot Studio (CVE-2026-21520)",
+          "url": "https://www.capsulesecurity.io/blog-post/shareleak-taking-the-wheel-of-microsofts-copilot-studio-cve-2026-21520"
+        },
+        {
+          "title": "VentureBeat - Microsoft, Salesforce Copilot/Agentforce prompt injection CVE and agent remediation playbook",
+          "url": "https://venturebeat.com/security/microsoft-salesforce-copilot-agentforce-prompt-injection-cve-agent-remediation-playbook"
+        }
+      ]
+    },
+    {
+      "id": "AID-2026-0007",
+      "slug": "datatalks-club-claude-code-terraform-destroy-production",
+      "title": "Claude Code ran terraform destroy and wiped DataTalks.Club production",
+      "date": "February 2026",
+      "year": 2026,
+      "category": "data-loss",
+      "severity": "high",
+      "oneLineSummary": "Claude Code proposed and then ran terraform destroy against a stale state file, and the founder, present but not closely reviewing at 11 PM, let it wipe DataTalks.Club's production infrastructure, including its database and all snapshots.",
+      "controlsThatBlock": [
+        "high_risk_requires_gate",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/datatalks-club-claude-code-terraform-destroy-production",
+      "page": "entries/AID-2026-0007.md",
+      "sources": [
+        {
+          "title": "How I dropped our production database (Alexey Grigorev, primary first-person account)",
+          "url": "https://alexeyondata.substack.com/p/how-i-dropped-our-production-database"
+        },
+        {
+          "title": "Alexey Grigorev public post on the incident (X)",
+          "url": "https://x.com/Al_Grigor/status/2029889772181934425"
+        },
+        {
+          "title": "Claude Code deletes developer's production setup including its database and snapshots (Tom's Hardware)",
+          "url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/claude-code-deletes-developers-production-setup-including-its-database-and-snapshots-2-5-years-of-records-were-nuked-in-an-instant"
+        }
+      ]
+    },
+    {
+      "id": "AID-2026-0006",
+      "slug": "claude-cowork-deleted-family-photos-2026",
+      "title": "Claude Cowork AI agent ran rm -rf and deleted ~15 years of a user's family photos",
+      "date": "February 2026",
+      "year": 2026,
+      "category": "data-loss",
+      "severity": "high",
+      "oneLineSummary": "Anthropic's Claude Cowork agent, asked to tidy a desktop and permitted only to delete temporary Office files, ran rm -rf and deleted a user's wife's \"photos\" directory holding roughly 15,000 images spanning about 15 years.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "limit_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/claude-cowork-deleted-family-photos-2026",
+      "page": "entries/AID-2026-0006.md",
+      "sources": [
+        {
+          "title": "Nick Davidov (@Nick_Davidov) original X post, Feb 7 2026",
+          "url": "https://x.com/Nick_Davidov/status/2019982510478995782"
+        },
+        {
+          "title": "Futurism: Claude AI Deleted a Man's Wife's Photos",
+          "url": "https://futurism.com/artificial-intelligence/claude-wife-photos"
+        },
+        {
+          "title": "DEV.UA: Claude Cowork deleted family photos",
+          "url": "https://dev.ua/en/news/claude-cowork-1770633970"
+        },
+        {
+          "title": "UC Strategies: Claude AI wipes 15,000 family photos in minutes",
+          "url": "https://ucstrategies.com/news/i-nearly-had-a-heart-attack-claude-ai-wipes-15000-family-photos-in-minutes/"
+        }
+      ]
+    },
     {
       "id": "AID-2026-0005",
       "slug": "meta-rogue-agent-sev1-data-exposure",
@@ -86,7 +187,7 @@
       "year": 2026,
       "category": "runaway-execution",
       "severity": "critical",
-      "oneLineSummary": "An AI agent told to scan a hobbyist network autonomously provisioned five large AWS instances in a redeploy loop, incurring $6,531.30 in verified charges under a blanket operator \"continue\" directive.",
+      "oneLineSummary": "An AI agent told to scan a hobbyist network autonomously provisioned five large AWS instances in a redeploy loop, incurring an initial $6,531.30 bill under a blanket operator \"continue\" directive; AWS later reduced the charge to roughly $1,894 after the operator disputed it.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate"
@@ -117,7 +218,7 @@
       "year": 2026,
       "category": "data-loss",
       "severity": "critical",
-      "oneLineSummary": "A Cursor AI agent working on a staging task invoked volumeDelete using an over-privileged Railway token, destroying PocketOS's production database and backups in nine seconds and causing a 30-hour outage.",
+      "oneLineSummary": "A Cursor AI agent working on a staging task invoked volumeDelete using an over-privileged Railway token, destroying PocketOS's production database and its co-located backups in nine seconds; accounts of the recovery differ, from a partial restore to days of manual rebuilding and permanent loss of recent data.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate",
@@ -177,14 +278,307 @@
       ]
     },
     {
+      "id": "AID-2025-0015",
+      "slug": "whatsapp-mcp-tool-poisoning-exfiltration",
+      "title": "WhatsApp MCP tool-poisoning exfiltration proof-of-concept",
+      "date": "April 7, 2025",
+      "year": 2025,
+      "category": "data-exfiltration",
+      "severity": "high",
+      "oneLineSummary": "Invariant Labs demonstrated a malicious MCP server that used a delayed tool-poisoning attack to hijack a co-installed WhatsApp MCP server and exfiltrate a user's chat history to an attacker-controlled number.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "sod_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/whatsapp-mcp-tool-poisoning-exfiltration",
+      "page": "entries/AID-2025-0015.md",
+      "sources": [
+        {
+          "title": "WhatsApp MCP Exploited: Exfiltrating your message history via MCP (Invariant Labs)",
+          "url": "https://invariantlabs.ai/blog/whatsapp-mcp-exploited"
+        },
+        {
+          "title": "MCP injection experiments (PoC code, invariantlabs-ai)",
+          "url": "https://github.com/invariantlabs-ai/mcp-injection-experiments"
+        },
+        {
+          "title": "MCP Horror Stories: The WhatsApp Data Exfiltration Issue (Docker)",
+          "url": "https://www.docker.com/blog/mcp-horror-stories-whatsapp-data-exfiltration-issue/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0014",
+      "slug": "wadsworth-v-walmart-ai-fabricated-citations",
+      "title": "Wadsworth v. Walmart: AI-fabricated case citations in federal court filing",
+      "date": "February 2025",
+      "year": 2025,
+      "category": "fabrication",
+      "severity": "medium",
+      "oneLineSummary": "Morgan & Morgan attorneys filed a federal court motion citing nine cases, eight of which were fabricated by the firm's in-house AI platform, and were sanctioned.",
+      "controlsThatBlock": [
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/wadsworth-v-walmart-ai-fabricated-citations",
+      "page": "entries/AID-2025-0014.md",
+      "sources": [
+        {
+          "title": "Wadsworth v. Walmart Inc. order (FindLaw)",
+          "url": "https://caselaw.findlaw.com/court/us-dis-crt-d-wyo/117003959.html"
+        },
+        {
+          "title": "Sanctions on Lawyers for Filing Motion Containing AI-Hallucinated Cases (Reason/Volokh)",
+          "url": "https://reason.com/volokh/2025/02/25/sanctions-on-lawyers-for-filing-motion-containing-ai-hallucinated-cases/"
+        },
+        {
+          "title": "Federal Judge Sanctions Morgan & Morgan Attorneys for AI-Generated Fake Cases (LawNext)",
+          "url": "https://www.lawnext.com/2025/02/federal-judge-sanctions-morgan-morgan-attorneys-for-ai-generated-fake-cases-in-court-filing.html"
+        },
+        {
+          "title": "Judge Fines Three Lawyers for Citing AI-Generated Fake Cases (Justia)",
+          "url": "https://news.justia.com/judge-fines-three-lawyers-for-citing-ai-generated-fake-cases/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0013",
+      "slug": "postmark-mcp-backdoor-bcc-email-exfiltration-2025",
+      "title": "Malicious postmark-mcp npm package silently BCCs AI-agent emails to attacker",
+      "date": "September 2025",
+      "year": 2025,
+      "category": "data-exfiltration",
+      "severity": "high",
+      "oneLineSummary": "A copycat npm MCP server for Postmark added a hidden BCC in version 1.0.16 that silently copied every email sent by connected AI agents to an attacker-controlled address.",
+      "controlsThatBlock": [
+        "skill_not_granted",
+        "sod_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/postmark-mcp-backdoor-bcc-email-exfiltration-2025",
+      "page": "entries/AID-2025-0013.md",
+      "sources": [
+        {
+          "title": "Koi Security: postmark-mcp npm malicious backdoor email theft",
+          "url": "https://www.koi.ai/blog/postmark-mcp-npm-malicious-backdoor-email-theft"
+        },
+        {
+          "title": "The Hacker News: First malicious MCP server found",
+          "url": "https://thehackernews.com/2025/09/first-malicious-mcp-server-found.html"
+        },
+        {
+          "title": "The Register: Postmark MCP server code hijacked",
+          "url": "https://www.theregister.com/2025/09/29/postmark_mcp_server_code_hijacked/"
+        },
+        {
+          "title": "Snyk: Malicious MCP server on npm postmark-mcp harvests emails",
+          "url": "https://snyk.io/blog/malicious-mcp-server-on-npm-postmark-mcp-harvests-emails/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0012",
+      "slug": "google-gemini-cli-hallucinated-file-move-destroyed-project",
+      "title": "Google Gemini CLI hallucinated a successful mkdir and overwrote a user's project files",
+      "date": "July 2025",
+      "year": 2025,
+      "category": "data-loss",
+      "severity": "high",
+      "oneLineSummary": "Google Gemini CLI ran a file-move operation based on a hallucinated successful directory creation, sequentially overwriting a user's files until only one survived.",
+      "controlsThatBlock": [
+        "high_risk_requires_gate",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/google-gemini-cli-hallucinated-file-move-destroyed-project",
+      "page": "entries/AID-2025-0012.md",
+      "sources": [
+        {
+          "title": "GitHub issue #4586, google-gemini/gemini-cli",
+          "url": "https://github.com/google-gemini/gemini-cli/issues/4586"
+        },
+        {
+          "title": "Google's Gemini CLI Deletes User Files, Confesses Catastrophic Failure (WinBuzzer)",
+          "url": "https://winbuzzer.com/2025/07/26/googles-gemini-cli-deletes-user-files-confesses-catastrophic-failure-xcxwbn/"
+        },
+        {
+          "title": "Google Gemini AI Hallucinates Commands, Deletes Expert's Files (WebProNews)",
+          "url": "https://www.webpronews.com/google-gemini-ai-hallucinates-commands-deletes-experts-files-takes-the-blame/"
+        },
+        {
+          "title": "AI Incident Database, Incident 1178",
+          "url": "https://incidentdatabase.ai/cite/1178/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0011",
+      "slug": "gitlab-duo-prompt-injection-source-code-exfiltration",
+      "title": "GitLab Duo remote prompt injection exfiltrated private source code",
+      "date": "May 2025 (disclosed to GitLab February 2025)",
+      "year": 2025,
+      "category": "data-exfiltration",
+      "severity": "high",
+      "oneLineSummary": "Hidden prompt-injection text planted in GitLab repository content made the Claude-powered GitLab Duo assistant read private source code and leak it to an attacker-controlled server.",
+      "controlsThatBlock": [
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/gitlab-duo-prompt-injection-source-code-exfiltration",
+      "page": "entries/AID-2025-0011.md",
+      "sources": [
+        {
+          "title": "Legit Security: Remote Prompt Injection in GitLab Duo",
+          "url": "https://www.legitsecurity.com/blog/remote-prompt-injection-in-gitlab-duo"
+        },
+        {
+          "title": "The Hacker News: GitLab Duo Vulnerability Enabled Attackers to Hijack AI Responses",
+          "url": "https://thehackernews.com/2025/05/gitlab-duo-vulnerability-enabled.html"
+        },
+        {
+          "title": "CSO Online: Prompt injection flaws in GitLab Duo highlight risks in AI assistants",
+          "url": "https://www.csoonline.com/article/3992845/prompt-injection-flaws-in-gitlab-duo-highlights-risks-in-ai-assistants.html"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0010",
+      "slug": "claude-code-rm-rf-home-directory-issue-10077",
+      "title": "Claude Code ran rm -rf and deleted a developer's home directory (issue #10077)",
+      "date": "October 2025",
+      "year": 2025,
+      "category": "data-loss",
+      "severity": "high",
+      "oneLineSummary": "Claude Code autonomously executed a recursive rm -rf that deleted all user-owned files in a developer's home directory, without a confirmation prompt and without the skip-permissions flag set.",
+      "controlsThatBlock": [
+        "high_risk_requires_gate",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/claude-code-rm-rf-home-directory-issue-10077",
+      "page": "entries/AID-2025-0010.md",
+      "sources": [
+        {
+          "title": "GitHub issue #10077: [BUG] CRITICAL: Claude Code executed rm -rf deleting entire home directory",
+          "url": "https://github.com/anthropics/claude-code/issues/10077"
+        },
+        {
+          "title": "Claude Code's rm -rf bug deleted my home directory (byteiota)",
+          "url": "https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/"
+        },
+        {
+          "title": "Coding Agent Horror Stories: The rm -rf Incident (Docker blog)",
+          "url": "https://www.docker.com/blog/coding-agent-horror-stories-the-rm-rf-incident/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0009",
+      "slug": "anthropic-project-vend-claudius-shop-loss",
+      "title": "Anthropic's Claudius AI shopkeeper (Project Vend) ran an office shop at a loss",
+      "date": "March-April 2025",
+      "year": 2025,
+      "category": "runaway-execution",
+      "severity": "medium",
+      "oneLineSummary": "An autonomous Claude agent running a small office shop made real purchasing and pricing decisions that lost money, including a below-cost tungsten-cube buying spree and giving inventory away for free.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "limit_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/anthropic-project-vend-claudius-shop-loss",
+      "page": "entries/AID-2025-0009.md",
+      "sources": [
+        {
+          "title": "Anthropic — Project Vend: Can Claude run a small shop?",
+          "url": "https://www.anthropic.com/research/project-vend-1"
+        },
+        {
+          "title": "TIME — Anthropic's Claude AI Ran a Shop. It Did Not Go Well",
+          "url": "https://time.com/7298088/claude-anthropic-shop-ai-jobs/"
+        },
+        {
+          "title": "Simon Willison — Project Vend writeup",
+          "url": "https://simonwillison.net/2025/Jun/27/project-vend/"
+        },
+        {
+          "title": "Engadget — Anthropic's Claude stocked a fridge with metal cubes",
+          "url": "https://www.engadget.com/ai/anthropics-claude-stocked-a-fridge-with-metal-cubes-when-it-was-put-in-charge-of-a-snacks-business-162750304.html"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0008",
+      "slug": "amazon-q-developer-vscode-wiper-prompt-injection-2025",
+      "title": "Amazon Q Developer VS Code extension shipped with data-wiping prompt injection",
+      "date": "July 2025",
+      "year": 2025,
+      "category": "data-loss",
+      "severity": "high",
+      "oneLineSummary": "A hacker slipped a data-wiping prompt into the Amazon Q Developer VS Code extension via a malicious pull request, and the compromised build shipped to a marketplace with nearly one million installs before the injected code failed to execute due to a syntax error.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "sod_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/amazon-q-developer-vscode-wiper-prompt-injection-2025",
+      "page": "entries/AID-2025-0008.md",
+      "sources": [
+        {
+          "title": "AWS GitHub Security Advisory GHSA-7g7f-ff96-5gcw (CVE-2025-8217)",
+          "url": "https://github.com/aws/aws-toolkit-vscode/security/advisories/GHSA-7g7f-ff96-5gcw"
+        },
+        {
+          "title": "BleepingComputer: Amazon AI coding agent hacked to inject data-wiping commands",
+          "url": "https://www.bleepingcomputer.com/news/security/amazon-ai-coding-agent-hacked-to-inject-data-wiping-commands/"
+        },
+        {
+          "title": "SC Media / SC World: Amazon Q extension for VS Code reportedly injected with wiper prompt",
+          "url": "https://www.scworld.com/news/amazon-q-extension-for-vs-code-reportedly-injected-with-wiper-prompt"
+        },
+        {
+          "title": "The Register: Amazon Q AI prompt injection",
+          "url": "https://www.theregister.com/2025/07/24/amazon_q_ai_prompt/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2025-0007",
+      "slug": "aixbt-agent-dashboard-prompt-drain-55-eth-2025",
+      "title": "aixbt autonomous crypto agent drained of 55.5 ETH via injected dashboard prompts",
+      "date": "18 March 2025",
+      "year": 2025,
+      "category": "unauthorized-financial-action",
+      "severity": "high",
+      "oneLineSummary": "An attacker who accessed the aixbt trading agent's dashboard queued malicious prompts that caused the agent to transfer 55.5 ETH (about $104,000 to $106,200) out of its on-chain wallet.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "sod_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/aixbt-agent-dashboard-prompt-drain-55-eth-2025",
+      "page": "entries/AID-2025-0007.md",
+      "sources": [
+        {
+          "title": "aixbt AI agent hacked, losing 55 ETH, AIXBT token drops",
+          "url": "https://crypto.news/aixbt-agent-hacked-losing-55eth-aixbt-token-drops-2025/"
+        },
+        {
+          "title": "AI Crypto Bot aixbt Loses $106,200 in ETH Through Dashboard Breach",
+          "url": "https://blockonomi.com/ai-crypto-bot-aixbt-loses-106200-in-eth-through-dashboard-breach/"
+        }
+      ]
+    },
+    {
       "id": "AID-2025-0006",
       "slug": "shadowleak-chatgpt-deep-research-gmail-exfiltration",
       "title": "ShadowLeak: Zero-Click Gmail Exfiltration via ChatGPT Deep Research Agent",
-      "date": "June–August 2025",
+      "date": "June–September 2025",
       "year": 2025,
       "category": "data-exfiltration",
       "severity": "critical",
-      "oneLineSummary": "ChatGPT Deep Research agent exfiltrated Gmail data via hidden email instruction, bypassing network defenses by executing outbound requests from within OpenAI's cloud.",
+      "oneLineSummary": "Radware researchers demonstrated a proof-of-concept in which ChatGPT's Deep Research agent could be induced to exfiltrate Gmail data via a hidden email instruction, with outbound requests originating from within OpenAI's cloud so local network defenses could not see them. OpenAI fixed it before public disclosure; no in-the-wild exploitation was reported.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate",
@@ -251,15 +645,14 @@
     {
       "id": "AID-2025-0004",
       "slug": "mypillow-ai-brief-fake-citations-repeat",
-      "title": "MyPillow Motion Filings with AI-Fabricated Citations and Repeat Offense",
+      "title": "MyPillow Attorney Filings with Fabricated Citations and a Repeat Miscitation",
       "date": "2025-2026",
       "year": 2025,
       "category": "fabrication",
       "severity": "high",
-      "oneLineSummary": "Attorneys filed motions with AI-fabricated citations to nonexistent cases, were sanctioned, then filed again with another flawed citation despite the prior sanction.",
+      "oneLineSummary": "Attorneys filed a brief with AI-generated citations to nonexistent cases and were sanctioned; months later the lead attorney was sanctioned again for misciting a real case to the wrong court and mischaracterizing its holding.",
       "controlsThatBlock": [
-        "skill_not_granted",
-        "high_risk_requires_gate"
+        "approval_gate"
       ],
       "reproducible": true,
       "reproPath": "examples/mypillow-ai-brief-fake-citations-repeat",
@@ -323,7 +716,7 @@
       "year": 2025,
       "category": "data-exfiltration",
       "severity": "critical",
-      "oneLineSummary": "A crafted email's hidden instructions tricked M365 Copilot into exfiltrating OneDrive, SharePoint, and Teams data to an attacker-controlled URL with no user click required.",
+      "oneLineSummary": "Researchers demonstrated a zero-click proof-of-concept in which a crafted email's hidden instructions could make M365 Copilot exfiltrate OneDrive, SharePoint, and Teams data to an attacker-controlled URL with no user click required. Microsoft fixed it server-side before disclosure.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate"
@@ -354,9 +747,8 @@
       "year": 2025,
       "category": "data-exfiltration",
       "severity": "critical",
-      "oneLineSummary": "Hidden markdown instructions in pull requests caused GitHub Copilot Chat to exfiltrate private source code and secrets to attacker-controlled servers.",
+      "oneLineSummary": "Researchers demonstrated that hidden markdown instructions in pull requests could make GitHub Copilot Chat leak private source code and secrets one character at a time through GitHub's Camo image proxy; GitHub fixed it before disclosure with no known in-the-wild use.",
       "controlsThatBlock": [
-        "skill_not_granted",
         "high_risk_requires_gate"
       ],
       "reproducible": true,
@@ -374,6 +766,130 @@
         {
           "title": "The Register: GitHub Copilot Chat Vulnerability",
           "url": "https://www.theregister.com/2025/10/09/github_copilot_chat_vulnerability/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2024-0004",
+      "slug": "tenncare-teds-automated-medicaid-terminations-2024",
+      "title": "TennCare Connect / TEDS automated Medicaid terminations",
+      "date": "August 2024 (ruling); system launched 2019",
+      "year": 2024,
+      "category": "wrongful-automated-decision",
+      "severity": "critical",
+      "oneLineSummary": "Tennessee's $400M+ automated Medicaid eligibility system wrongfully terminated or denied coverage for tens of thousands, and a federal court ruled the program violated the Medicaid Act, due process, and the ADA.",
+      "controlsThatBlock": [
+        "high_risk_requires_gate",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/tenncare-teds-automated-medicaid-terminations-2024",
+      "page": "entries/AID-2024-0004.md",
+      "sources": [
+        {
+          "title": "A.M.C. v. Smith, No. 3:20-cv-00240 (M.D. Tenn.) docket",
+          "url": "https://law.justia.com/cases/federal/district-courts/tennessee/tnmdce/3:2020cv00240/412/"
+        },
+        {
+          "title": "National Health Law Program: Court Rules Tennessee's Medicaid Program Wrongfully Denied Health Care for Thousands",
+          "url": "https://healthlaw.org/news/major-litigation-win-court-rules-tennessees-medicaid-program-wrongfully-denied-health-care-for-thousands/"
+        },
+        {
+          "title": "Gizmodo: Judge Rules $400 Million Algorithmic System Illegally Denied Thousands of People's Medicaid Benefits",
+          "url": "https://gizmodo.com/judge-rules-400-million-algorithmic-system-illegally-denied-thousands-of-peoples-medicaid-benefits-2000492529"
+        },
+        {
+          "title": "StateScoop: TennCare automated Medicaid healthcare coverage ruling",
+          "url": "https://statescoop.com/tenncare-automated-medicaid-healthcare-coverage-2024/"
+        }
+      ]
+    },
+    {
+      "id": "AID-2024-0003",
+      "slug": "freysa-ai-agent-tricked-releasing-47k-prize-2024",
+      "title": "Freysa autonomous AI agent tricked into releasing $47K crypto prize pool",
+      "date": "November 2024",
+      "year": 2024,
+      "category": "unauthorized-financial-action",
+      "severity": "medium",
+      "oneLineSummary": "An autonomous on-chain AI agent hard-coded never to release its funds was prompt-tricked into transferring its entire ~13.19 ETH ($47,316) prize pool to a user.",
+      "controlsThatBlock": [
+        "sod_violation",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/freysa-ai-agent-tricked-releasing-47k-prize-2024",
+      "page": "entries/AID-2024-0003.md",
+      "sources": [
+        {
+          "title": "Human player outwits Freysa AI agent in $47,000 crypto challenge (The Block)",
+          "url": "https://www.theblock.co/post/328747/human-player-outwits-freysa-ai-agent-in-47000-crypto-challenge"
+        },
+        {
+          "title": "Hacker wins $47,000 by tricking AI chatbot with smart prompting (The Decoder)",
+          "url": "https://the-decoder.com/hacker-wins-47000-by-tricking-ai-chatbot-with-smart-prompting/"
+        },
+        {
+          "title": "Someone Just Tricked AI Agent Into Sending Them ETH (U.Today)",
+          "url": "https://u.today/someone-just-tricked-ai-agent-into-sending-them-eth"
+        }
+      ]
+    },
+    {
+      "id": "AID-2024-0002",
+      "slug": "evicore-the-dial-prior-authorization-algorithm",
+      "title": "eviCore \"the dial\" prior-authorization algorithm tuned to increase insurance denials",
+      "date": "October 2024 (investigation published; practices ongoing since at least 2021)",
+      "year": 2024,
+      "category": "wrongful-automated-decision",
+      "severity": "high",
+      "oneLineSummary": "eviCore, a Cigna-owned prior-authorization contractor serving about 100 million people, used an AI-backed algorithm insiders call \"the dial\" as the first screen on coverage requests and could tune it to route more requests to human reviewers to raise denial rates.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "sod_violation"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/evicore-the-dial-prior-authorization-algorithm",
+      "page": "entries/AID-2024-0002.md",
+      "sources": [
+        {
+          "title": "ProPublica / Capitol Forum — \"Not Medically Necessary\": Inside the Company Helping America's Biggest Health Insurers Deny Coverage for Care",
+          "url": "https://www.propublica.org/article/evicore-health-insurance-denials-cigna-unitedhealthcare-aetna-prior-authorizations"
+        },
+        {
+          "title": "CNN — coverage of the ProPublica/Capitol Forum eviCore investigation",
+          "url": "https://www.cnn.com/2024/11/07/health/evi-care-insurance-company-denials-propublica"
+        }
+      ]
+    },
+    {
+      "id": "AID-2024-0001",
+      "slug": "choice-home-warranty-chatbot-3000-ac-payout-2024",
+      "title": "Choice Home Warranty AI chatbot committed a $3,000 AC payout the company had not authorized",
+      "date": "September 2024",
+      "year": 2024,
+      "category": "binding-commitment",
+      "severity": "medium",
+      "oneLineSummary": "Choice Home Warranty's customer-service chatbot agreed in writing to a $3,000 maximum cash payout toward an air conditioner replacement, a commitment the company initially disowned and honored only after a TV news investigation.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "high_risk_requires_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/choice-home-warranty-chatbot-3000-ac-payout-2024",
+      "page": "entries/AID-2024-0001.md",
+      "sources": [
+        {
+          "title": "KSL Investigates: What is a company's obligation when AI chatbot makes a promise that can't be kept?",
+          "url": "https://www.ksl.com/article/51137100/what-is-a-companys-obligation-when-ai-chatbot-makes-a-promise-that-cant-be-kept"
+        },
+        {
+          "title": "Get Gephardt: What is a company's obligation to customers when its AI chatbot makes a promise that can't be kept?",
+          "url": "https://www.ksl.com/article/ksl-investigates/get-gephardt/what-is-a-companys-obligation-to-customers-when-its-ai-chatbot-makes-a-promise-that-cant-be-kept/684992/"
+        },
+        {
+          "title": "Moneywise/Yahoo Finance: Home warranty company refused to pay after its AI chatbot made a promise",
+          "url": "https://finance.yahoo.com/news/home-warranty-company-refused-pay-103900652.html"
         }
       ]
     },
@@ -422,10 +938,10 @@
       "year": 2023,
       "category": "fabrication",
       "severity": "high",
-      "oneLineSummary": "Attorneys filed a federal brief with six cases ChatGPT fabricated, reaching the court docket without independent approval.",
+      "oneLineSummary": "Attorneys filed a federal brief with six cases ChatGPT fabricated, without independently verifying that the cited cases existed.",
       "controlsThatBlock": [
-        "skill_not_granted",
-        "high_risk_requires_gate"
+        "independent_citation_verification",
+        "human_separation_of_duties"
       ],
       "reproducible": true,
       "reproPath": "examples/mata-v-avianca-fabricated-citations-filed",
@@ -452,12 +968,12 @@
     {
       "id": "AID-2023-0001",
       "slug": "chevrolet-watsonville-1-dollar-tahoe-binding-offer",
-      "title": "Chevrolet of Watsonville: Prompt-Injected Chatbot Attempts $80,999 Binding Offer",
+      "title": "Chevrolet of Watsonville: Prompt-Injected Chatbot Agreed in Conversation to Sell a Vehicle for $1",
       "date": "December 18, 2023",
       "year": 2023,
       "category": "binding-commitment",
       "severity": "high",
-      "oneLineSummary": "A prompt-injected ChatGPT-powered dealer chatbot agreed to sell an $81,000 vehicle for $1 and declared it a legally binding contract.",
+      "oneLineSummary": "A prompt-injected ChatGPT-powered dealer chatbot agreed in conversation to sell a 2024 Chevrolet Tahoe for $1 and called it legally binding; the exchange was text only and no sale occurred.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate",
@@ -488,7 +1004,7 @@
     {
       "id": "AID-2022-0003",
       "slug": "citigroup-444b-fat-finger-overridable-warning",
-      "title": "Citigroup $444B Basket: Dismissible Warnings, No Hard Block",
+      "title": "Citigroup $444B Basket: Hard Blocks Caught ~$248B, No Notional Ceiling on the Rest",
       "date": "May 2, 2022",
       "year": 2022,
       "category": "unauthorized-financial-action",
@@ -526,7 +1042,7 @@
       "year": 2022,
       "category": "binding-commitment",
       "severity": "critical",
-      "oneLineSummary": "Cigna's PxDx system resulted in 300,000+ medical claims denials approved in batches at 1.2 seconds each without individual claim review.",
+      "oneLineSummary": "Cigna's PxDx system was used to deny 300,000+ medical claims over about two months in 2022, with reviewing doctors averaging a reported 1.2 seconds per denial.",
       "controlsThatBlock": [
         "skill_not_granted",
         "high_risk_requires_gate"
@@ -585,16 +1101,147 @@
       ]
     },
     {
+      "id": "AID-2021-0002",
+      "slug": "zillow-offers-ibuyer-pricing-algorithm-loss-2021",
+      "title": "Zillow Offers iBuyer pricing algorithm drove $500M+ loss and wind-down",
+      "date": "November 2021",
+      "year": 2021,
+      "category": "binding-commitment",
+      "severity": "high",
+      "oneLineSummary": "Zillow's automated home-pricing algorithm made binding purchase offers above future resale values, forcing a $500M+ write-down and the shutdown of Zillow Offers.",
+      "controlsThatBlock": [
+        "limit_violation",
+        "high_risk_requires_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/zillow-offers-ibuyer-pricing-algorithm-loss-2021",
+      "page": "entries/AID-2021-0002.md",
+      "sources": [
+        {
+          "title": "Zillow Group Reports Third Quarter 2021 Financial Results, Shares Plan to Wind Down Zillow Offers Operations",
+          "url": "https://www.prnewswire.com/news-releases/zillow-group-reports-third-quarter-2021-financial-results--shares-plan-to-wind-down-zillow-offers-operations-301414460.html"
+        },
+        {
+          "title": "Zillow, facing big losses, quits flipping houses and will lay off a quarter of its staff (CNN Business)",
+          "url": "https://www.cnn.com/2021/11/02/homes/zillow-exit-ibuying-home-business"
+        },
+        {
+          "title": "Zillow Seeks to Sell 7,000 Homes for $2.8 Billion After Flipping Halt (Bloomberg)",
+          "url": "https://www.bnnbloomberg.ca/zillow-seeks-to-sell-7-000-homes-for-2-8-billion-after-flipping-halt-1.1675350"
+        }
+      ]
+    },
+    {
+      "id": "AID-2021-0001",
+      "slug": "dutch-childcare-benefits-scandal-toeslagenaffaire",
+      "title": "Dutch childcare benefits scandal (Toeslagenaffaire): nationality-based fraud-risk profiling wrongly accused ~26,000 families",
+      "date": "2021 (misconduct spanning roughly 2005-2019)",
+      "year": 2021,
+      "category": "wrongful-automated-decision",
+      "severity": "critical",
+      "oneLineSummary": "The Dutch Tax Administration used a fraud-risk classification method and nationality as a risk indicator to wrongly accuse about 26,000 families of childcare-benefit fraud, ordering many to repay large sums and causing severe hardship.",
+      "controlsThatBlock": [
+        "high_risk_requires_gate",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/dutch-childcare-benefits-scandal-toeslagenaffaire",
+      "page": "entries/AID-2021-0001.md",
+      "sources": [
+        {
+          "title": "Dutch childcare benefits scandal (Wikipedia)",
+          "url": "https://en.wikipedia.org/wiki/Dutch_childcare_benefits_scandal"
+        },
+        {
+          "title": "Methods used by Dutch Tax Administration unlawful and discriminatory (Autoriteit Persoonsgegevens)",
+          "url": "https://www.autoriteitpersoonsgegevens.nl/en/current/methods-used-by-dutch-tax-administration-unlawful-and-discriminatory"
+        },
+        {
+          "title": "Tax Administration fined for discriminatory and unlawful data processing (Autoriteit Persoonsgegevens)",
+          "url": "https://www.autoriteitpersoonsgegevens.nl/en/current/tax-administration-fined-for-discriminatory-and-unlawful-data-processing"
+        },
+        {
+          "title": "Dutch tax authority record fine for discriminatory data processing (Pinsent Masons)",
+          "url": "https://www.pinsentmasons.com/out-law/news/dutch-tax-authority-record-fine-discriminatory-data-processing"
+        }
+      ]
+    },
+    {
+      "id": "AID-2020-0001",
+      "slug": "robert-williams-detroit-facial-recognition-wrongful-arrest-2020",
+      "title": "Robert Williams wrongfully arrested after Detroit facial recognition false match",
+      "date": "January 2020",
+      "year": 2020,
+      "category": "wrongful-automated-decision",
+      "severity": "high",
+      "oneLineSummary": "A facial recognition system falsely matched Robert Williams to surveillance footage of a store theft, leading Detroit police to wrongfully arrest and detain him for about 30 hours.",
+      "controlsThatBlock": [
+        "approval_gate",
+        "high_risk_requires_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/robert-williams-detroit-facial-recognition-wrongful-arrest-2020",
+      "page": "entries/AID-2020-0001.md",
+      "sources": [
+        {
+          "title": "Williams v. City of Detroit (ACLU case page)",
+          "url": "https://www.aclu.org/cases/williams-v-city-of-detroit-face-recognition-false-arrest"
+        },
+        {
+          "title": "'It didn't make sense at all': Wrongful facial recognition arrest leads to landmark settlement (Michigan Public)",
+          "url": "https://www.michiganpublic.org/criminal-justice-legal-system/2024-06-28/it-didnt-make-sense-at-all-wrongful-facial-recognition-arrest-leads-to-landmark-settlement"
+        },
+        {
+          "title": "Detroit Takes Important Step in Curbing the Harms of Face Recognition Technology (EFF)",
+          "url": "https://www.eff.org/deeplinks/2024/07/detroit-takes-important-step-curbing-harms-face-recognition-technology"
+        }
+      ]
+    },
+    {
+      "id": "AID-2015-0002",
+      "slug": "michigan-midas-false-unemployment-fraud-2015",
+      "title": "Michigan MiDAS system auto-adjudicated tens of thousands of false unemployment fraud determinations",
+      "date": "2013 to 2015",
+      "year": 2015,
+      "category": "wrongful-automated-decision",
+      "severity": "critical",
+      "oneLineSummary": "Michigan's MiDAS system automatically flagged unemployment claimants as fraudulent with little or no human review, falsely accusing tens of thousands and triggering wage garnishment and tax-refund seizures.",
+      "controlsThatBlock": [
+        "high_risk_requires_gate",
+        "approval_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/michigan-midas-false-unemployment-fraud-2015",
+      "page": "entries/AID-2015-0002.md",
+      "sources": [
+        {
+          "title": "Michigan Unemployment Insurance False Fraud Determinations (BTAH case study)",
+          "url": "https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html"
+        },
+        {
+          "title": "The Case Over Michigan's Unemployment Insurance Agency's Faulty Automated System (Ford School STPP policy brief)",
+          "url": "https://stpp.fordschool.umich.edu/research/policy-brief/case-over-michigan-unemployment-insurance-agencys-faulty-automated-system"
+        },
+        {
+          "title": "Class Action Settlement Granted Final Approval (Pitt McGehee Palmer Bonanni & Rivers)",
+          "url": "https://www.pittlawpc.com/in-the-news/class-action-settlement-granted-final-approval"
+        },
+        {
+          "title": "Michiganders falsely accused of jobless fraud to share $20M settlement (Bridge Michigan)",
+          "url": "https://bridgemi.com/michigan-government/michiganders-falsely-accused-jobless-fraud-share-20m-settlement/"
+        }
+      ]
+    },
+    {
       "id": "AID-2015-0001",
       "slug": "australia-robodebt-automated-debt-recovery",
-      "title": "Australia Robodebt: Automated Debt Issuance Without Human Review",
+      "title": "Australia Robodebt: Unlawful Automated Welfare Debt Calculation",
       "date": "2015-2019",
       "year": 2015,
       "category": "wrongful-automated-decision",
       "severity": "critical",
-      "oneLineSummary": "Australia's Robodebt automated the calculation and issuance of welfare debts without human review, unlawfully raising approximately A$1.76 billion in debts against more than 433,000 people; the roughly A$751 million actually recovered was later repaid under a Federal Court settlement.",
+      "oneLineSummary": "Australia's Robodebt used an unlawful income-averaging method to automatically calculate and issue welfare debts, unlawfully raising approximately A$1.76 billion in debts against more than 433,000 people; the roughly A$751 million actually recovered was later repaid under a Federal Court settlement.",
       "controlsThatBlock": [
-        "skill_not_granted",
         "high_risk_requires_gate"
       ],
       "reproducible": true,
@@ -655,7 +1302,7 @@
       "year": 2012,
       "category": "runaway-execution",
       "severity": "critical",
-      "oneLineSummary": "Dormant algorithmic trading feature reactivated by configuration flag error, executing millions of unintended orders and causing $440 million in losses within 45 minutes.",
+      "oneLineSummary": "Dormant algorithmic trading feature reactivated by configuration flag error, executing millions of unintended orders and causing about $440 million in losses within 45 minutes.",
       "controlsThatBlock": [
         "skill_not_granted",
         "limit_violation",
@@ -676,6 +1323,41 @@
         {
           "title": "WilmerHale Client Alert on Rule 15c3-5 Violations",
           "url": "https://www.wilmerhale.com/en/insights/client-alerts/knight-capital-settles-rule-15c3-5-violations-with-sec-agrees-to-pay-12-million"
+        }
+      ]
+    },
+    {
+      "id": "AID-2010-0001",
+      "slug": "2010-flash-crash-automated-sell-algorithm",
+      "title": "2010 Flash Crash triggered by automated sell algorithm",
+      "date": "May 6, 2010",
+      "year": 2010,
+      "category": "runaway-execution",
+      "severity": "critical",
+      "oneLineSummary": "An automated sell program dumped $4.1 billion of E-mini S&P 500 futures in about 20 minutes without regard to price or time, contributing to a roughly 998-point intraday drop in the Dow.",
+      "controlsThatBlock": [
+        "limit_violation",
+        "high_risk_requires_gate"
+      ],
+      "reproducible": false,
+      "reproPath": "examples/2010-flash-crash-automated-sell-algorithm",
+      "page": "entries/AID-2010-0001.md",
+      "sources": [
+        {
+          "title": "CFTC-SEC Joint Report: Findings Regarding the Market Events of May 6, 2010",
+          "url": "https://www.sec.gov/files/marketevents-report.pdf"
+        },
+        {
+          "title": "CFTC: Findings Regarding the Market Events of May 6, 2010",
+          "url": "https://www.cftc.gov/node/236051"
+        },
+        {
+          "title": "2010 flash crash (Wikipedia)",
+          "url": "https://en.wikipedia.org/wiki/2010_flash_crash"
+        },
+        {
+          "title": "SEC, CFTC blame $4.1 billion trade for flash crash (CNN Money)",
+          "url": "https://money.cnn.com/2010/10/01/markets/SEC_CFTC_flash_crash/index.htm"
         }
       ]
     }

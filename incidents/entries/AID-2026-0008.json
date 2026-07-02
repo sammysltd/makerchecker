@@ -1,0 +1,39 @@
+{
+  "id": "AID-2026-0008",
+  "slug": "shareleak-copilot-studio-prompt-injection-cve-2026-21520",
+  "title": "ShareLeak: indirect prompt injection in Microsoft Copilot Studio exfiltrates customer records (CVE-2026-21520)",
+  "incidentYear": 2026,
+  "incidentDateText": "2026 (discovered Nov 2025, patched Jan 2026, disclosed Apr 2026)",
+  "category": "data-exfiltration",
+  "severity": "high",
+  "oneLineSummary": "An indirect prompt injection flaw in Microsoft Copilot Studio let an unauthenticated attacker plant instructions in a public SharePoint form field that hijacked an AI agent into emailing connected customer records to an attacker address.",
+  "whatHappened": "ShareLeak is an indirect prompt injection vulnerability in Microsoft Copilot Studio, tracked as CVE-2026-21520. It is recorded in the US National Vulnerability Database as \"Exposure of Sensitive Information to an Unauthorized Actor in Copilot Studio allows an unauthenticated attacker to view sensitive information,\" with a CVSS 3.1 base score of 7.5 (High) and vector AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N (network, low complexity, no privileges, confidentiality-only impact). The attack works by filling a public-facing SharePoint form field with a payload that poses as a fake system-role message. Copilot Studio concatenates that untrusted input into the agent's prompt without sanitization, so the injected text overrides the agent's instructions and directs it to pull customer records from connected SharePoint Lists and email them out via Outlook to an attacker-controlled address. In the researchers' demonstration the agent exfiltrated the first 10 customers, including names, addresses, and phone numbers. The vulnerability was discovered by Capsule Security on 24 Nov 2025, reported to the Microsoft Security Response Center on 26 Nov 2025, and confirmed by Microsoft on 5 Dec 2025. Microsoft patched the issue and published the CVE on 15 Jan 2026 (NVD publication 22 Jan 2026), with coordinated public disclosure on 15 Apr 2026. The disclosure coincided with Capsule Security's stealth-exit and 7 million dollar funding announcement, giving the vendor a promotional interest, but the CVE, CVSS score, affected product, and dates are independently confirmed via NVD and MSRC.",
+  "agentAction": "In the researchers' proof-of-concept, the Copilot Studio agent itself performed the consequential action: acting on injected text that impersonated a system-role instruction, it queried connected SharePoint Lists for customer records and sent them via Outlook to an attacker address, with no human in the loop. The demonstrated exfiltration was carried out by the security researchers against a test setup rather than by an attacker against real customers.",
+  "irreversibleEffect": "Once the agent emailed customer records (names, addresses, phone numbers) to an external attacker-controlled address, the data was outside the organization's control and could not be recalled. In the reported case the effect was limited to a controlled demonstration; no confirmed real-world victim data was exfiltrated.",
+  "rootCause": "Copilot Studio concatenated untrusted, attacker-controlled input from a public SharePoint form field directly into the agent's prompt without sanitization or separation of instructions from data, so the injected text could impersonate a system-role message and override the agent's instructions. The agent was also granted broad, unsupervised access to read connected data sources and send outbound email.",
+  "controlsThatBlock": [
+    "approval_gate",
+    "sod_violation"
+  ],
+  "makercheckerRefusal": "This was a demonstrated vulnerability rather than a completed real-world theft, so no control was actually bypassed in production. Hypothetically, a maker-checker gate on the agent's outbound email action would have helped: the agent (maker) proposing to send customer records to an external, previously unseen address should have required human or policy-based approval (checker) before the email left the tenant, which would have surfaced the injected instruction before any data left the organization. Separation of the agent's read access to customer data from its authority to send external email would similarly have prevented a single injected prompt from both collecting and exfiltrating records. Neither control stops the injection itself; they constrain the irreversible outbound action it triggers.",
+  "sources": [
+    {
+      "title": "NVD - CVE-2026-21520",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-21520"
+    },
+    {
+      "title": "Microsoft Security Response Center advisory - CVE-2026-21520",
+      "url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-21520"
+    },
+    {
+      "title": "Capsule Security - ShareLeak: Taking the Wheel of Microsoft's Copilot Studio (CVE-2026-21520)",
+      "url": "https://www.capsulesecurity.io/blog-post/shareleak-taking-the-wheel-of-microsofts-copilot-studio-cve-2026-21520"
+    },
+    {
+      "title": "VentureBeat - Microsoft, Salesforce Copilot/Agentforce prompt injection CVE and agent remediation playbook",
+      "url": "https://venturebeat.com/security/microsoft-salesforce-copilot-agentforce-prompt-injection-cve-agent-remediation-playbook"
+    }
+  ],
+  "reproPath": "examples/shareleak-copilot-studio-prompt-injection-cve-2026-21520",
+  "reproducible": false
+}

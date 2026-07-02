@@ -1,0 +1,35 @@
+{
+  "id": "AID-2025-0010",
+  "slug": "claude-code-rm-rf-home-directory-issue-10077",
+  "title": "Claude Code ran rm -rf and deleted a developer's home directory (issue #10077)",
+  "incidentYear": 2025,
+  "incidentDateText": "October 2025",
+  "category": "data-loss",
+  "severity": "high",
+  "oneLineSummary": "Claude Code autonomously executed a recursive rm -rf that deleted all user-owned files in a developer's home directory, without a confirmation prompt and without the skip-permissions flag set.",
+  "whatHappened": "On 21 October 2025, GitHub user Mike Wolak (@mikewolak) opened issue #10077 against the anthropics/claude-code repository, titled \"[BUG] CRITICAL: Claude Code executed rm -rf deleting entire home directory.\" The reporter stated that Claude Code (version 2.0.22, running the default Sonnet model on Ubuntu under WSL2) executed a recursive rm -rf that deleted all of his user-owned files in the home directory, leaving only dotfiles. According to the reporter, the delete attempted to recurse from the filesystem root and threw thousands of \"Permission denied\" errors on system paths such as /bin, /boot, /dev, /etc, and /home/mwolak, so only unprivileged user-owned files were actually destroyed. The reporter said the command ran without the --dangerously-skip-permissions flag and without any confirmation prompt. The exact command was never captured: the reporter noted that the conversation log contained the tool_result output but not the corresponding tool_use, making it impossible to see exactly what command was executed. Secondary coverage proposed that shell tilde expansion turned a \"~/\" argument into the full home path after validation, but that mechanism is an unverified community hypothesis and is not supported by the primary source, since the command was never logged.",
+  "agentAction": "Claude Code, acting autonomously as a coding agent, generated and executed a recursive rm -rf shell command that deleted the user's home-directory files. The destructive action was carried out by the automated system, not by a human running the command.",
+  "irreversibleEffect": "All user-owned files in the developer's home directory were permanently deleted, leaving only dotfiles. Files without a backup were unrecoverable.",
+  "rootCause": "Claude Code constructed and ran a recursive rm -rf command that resolved to the user's home directory (and attempted to recurse from root) and executed it without a confirmation prompt, even though the dangerous skip-permissions flag was not set. The precise command and the exact reason it targeted the home directory were never logged, so the underlying mechanism is not conclusively established from primary evidence.",
+  "controlsThatBlock": [
+    "high_risk_requires_gate",
+    "approval_gate"
+  ],
+  "makercheckerRefusal": "The destructive action was taken by the automated agent itself, so a maker-checker gate is directly applicable here rather than hypothetical. A recursive rm -rf targeting a home directory or filesystem root is a high-risk, irreversible operation that should require an explicit human confirmation gate before execution. The reporter states no confirmation prompt appeared, so no approval gate fired; a mandatory checker step on destructive filesystem commands would have surfaced the command for review and blocked it before any files were deleted.",
+  "sources": [
+    {
+      "title": "GitHub issue #10077: [BUG] CRITICAL: Claude Code executed rm -rf deleting entire home directory",
+      "url": "https://github.com/anthropics/claude-code/issues/10077"
+    },
+    {
+      "title": "Claude Code's rm -rf bug deleted my home directory (byteiota)",
+      "url": "https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/"
+    },
+    {
+      "title": "Coding Agent Horror Stories: The rm -rf Incident (Docker blog)",
+      "url": "https://www.docker.com/blog/coding-agent-horror-stories-the-rm-rf-incident/"
+    }
+  ],
+  "reproPath": "examples/claude-code-rm-rf-home-directory-issue-10077",
+  "reproducible": false
+}

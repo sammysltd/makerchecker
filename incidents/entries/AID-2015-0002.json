@@ -1,0 +1,39 @@
+{
+  "id": "AID-2015-0002",
+  "slug": "michigan-midas-false-unemployment-fraud-2015",
+  "title": "Michigan MiDAS system auto-adjudicated tens of thousands of false unemployment fraud determinations",
+  "incidentYear": 2015,
+  "incidentDateText": "2013 to 2015",
+  "category": "wrongful-automated-decision",
+  "severity": "critical",
+  "oneLineSummary": "Michigan's MiDAS system automatically flagged unemployment claimants as fraudulent with little or no human review, falsely accusing tens of thousands and triggering wage garnishment and tax-refund seizures.",
+  "whatHappened": "Between 2013 and 2015, the Michigan Unemployment Insurance Agency ran MiDAS (Michigan Integrated Data Automated System), which auto-adjudicated unemployment-insurance fraud determinations with minimal or no human review. The system automatically treated data discrepancies as evidence of fraud, using crude logic such as averaging a claimant's total income across a period rather than reading individual paychecks. Roughly 40,000 residents were falsely accused of fraud in the system's first roughly two years, about a five-fold jump over expected numbers. A 2016 review by Michigan's Auditor General examined about 22,000 determinations and found that roughly 93 percent did not involve actual fraud. The state pursued collection aggressively, seizing tax refunds and garnishing wages, and imposed penalties of up to quadruple (400 percent) the alleged overpayment. Litigation followed in Bauserman v. State of Michigan Unemployment Insurance Agency (lead plaintiffs Grant Bauserman and Teddy Broe). After roughly nine years, the Michigan Court of Claims (Judge Douglas Shapiro) granted final approval to a $20 million class-action settlement on January 30, 2024. The certified settlement class was about 3,000 to 3,200 members, a subset who pursued the claim, not the full roughly 40,000 people accused.",
+  "agentAction": "The MiDAS software auto-adjudicated fraud determinations and issued them with little or no human review; state collection systems then acted on those determinations by seizing tax refunds and garnishing wages.",
+  "irreversibleEffect": "Tens of thousands of people were branded as fraudsters and had wages garnished and tax refunds seized, with penalties of up to 400 percent of alleged overpayments, causing financial harm including bankruptcies before the determinations could be challenged.",
+  "rootCause": "An automated adjudication system was allowed to issue consequential fraud determinations without meaningful human review, using flawed logic that treated any data discrepancy as fraud, producing an error rate around 93 percent.",
+  "controlsThatBlock": [
+    "high_risk_requires_gate",
+    "approval_gate"
+  ],
+  "makercheckerRefusal": "A maker-checker control would have required a human reviewer (checker) to approve each fraud determination before it took legal and financial effect, rather than letting MiDAS auto-adjudicate. Because these were high-consequence decisions (fraud accusations plus wage garnishment and refund seizure with quadruple penalties), a high-risk gate should have forced individual human adjudication with access to the underlying paycheck records. In practice no such gate existed: the actions were carried out by the automated system with minimal human involvement, which is precisely why the roughly 93 percent error rate went undetected until an Auditor General review and years of litigation. The control is framed here as what should have been in place, not something that fired.",
+  "sources": [
+    {
+      "title": "Michigan Unemployment Insurance False Fraud Determinations (BTAH case study)",
+      "url": "https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html"
+    },
+    {
+      "title": "The Case Over Michigan's Unemployment Insurance Agency's Faulty Automated System (Ford School STPP policy brief)",
+      "url": "https://stpp.fordschool.umich.edu/research/policy-brief/case-over-michigan-unemployment-insurance-agencys-faulty-automated-system"
+    },
+    {
+      "title": "Class Action Settlement Granted Final Approval (Pitt McGehee Palmer Bonanni & Rivers)",
+      "url": "https://www.pittlawpc.com/in-the-news/class-action-settlement-granted-final-approval"
+    },
+    {
+      "title": "Michiganders falsely accused of jobless fraud to share $20M settlement (Bridge Michigan)",
+      "url": "https://bridgemi.com/michigan-government/michiganders-falsely-accused-jobless-fraud-share-20m-settlement/"
+    }
+  ],
+  "reproPath": "examples/michigan-midas-false-unemployment-fraud-2015",
+  "reproducible": false
+}
