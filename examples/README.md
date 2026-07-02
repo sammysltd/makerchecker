@@ -68,6 +68,18 @@ await governed.invoke({ statement: ["t1", "t2", "t3"] });
 
 See [`connectors/langchain/README.md`](connectors/langchain/README.md) for the walkthrough. The Claude Agent SDK wrapper (`governClaudeTool` from [`@makerchecker/connector-claude-agent`](../packages/connector-claude-agent)) is shown inline in [`middleware/README.md`](middleware/README.md).
 
+## Healthcare use-case demos (runnable)
+
+Two proxy-path demos for the healthcare use cases that have no seeded flow yet. Like the incident scenarios below, each `demo.mjs` configures its roles, skills, and grants, drives a governed agent through the proxy, shows the consequential act denied to the agent acting alone, then verifies the audit chain.
+
+- [`oncology-patient-access`](oncology-patient-access/) — Oncology patient access: the hub agent drafts benefits, funding stacks, and appeals; who signs the enrollment and the appeal
+- [`cro-cohort-identification`](cro-cohort-identification/) — CRO cohort identification: AI pre-screens against inclusion/exclusion criteria; the investigator signs the eligibility attestation
+
+```bash
+node examples/oncology-patient-access/demo.mjs      # server on :3000, auth disabled or admin key
+node examples/cro-cohort-identification/demo.mjs
+```
+
 ## Incident scenarios (runnable)
 
 Twenty real incidents where an AI or automated system took a consequential action it should not have. Each directory is a self-contained, runnable scenario: its `demo.mjs` configures the roles, skills, grants, and limits, drives a governed agent through the proxy, shows the control denying or gating the action, then verifies the audit chain. Each `README.md` keeps the incident's sources and the mapping.
@@ -76,7 +88,7 @@ Twenty real incidents where an AI or automated system took a consequential actio
 node examples/knight-capital-440m-runaway-trading/demo.mjs   # server on :3000, auth disabled or admin key
 ```
 
-- [`air-canada-chatbot-bereavement-refund-binding`](air-canada-chatbot-bereavement-refund-binding/) — Air Canada was bound by its chatbot's invented refund policy
+- [`air-canada-chatbot-bereavement-refund-binding`](air-canada-chatbot-bereavement-refund-binding/) — Air Canada was bound by its chatbot's misstated refund policy
 - [`australia-robodebt-automated-debt-recovery`](australia-robodebt-automated-debt-recovery/) — Robodebt: removing the human from a debt notice
 - [`camoleak-github-copilot-chat-source-code-exfiltration`](camoleak-github-copilot-chat-source-code-exfiltration/) — CamoLeak: hidden markdown made Copilot leak private source code
 - [`chevrolet-watsonville-1-dollar-tahoe-binding-offer`](chevrolet-watsonville-1-dollar-tahoe-binding-offer/) — The $1 Tahoe: a prompt-injected dealership chatbot tries to bind the business
@@ -95,6 +107,6 @@ node examples/knight-capital-440m-runaway-trading/demo.mjs   # server on :3000, 
 - [`mypillow-ai-brief-fake-citations-repeat`](mypillow-ai-brief-fake-citations-repeat/) — The MyPillow brief: 30 fake AI citations, then a repeat offense
 - [`replit-agent-deleted-production-database`](replit-agent-deleted-production-database/) — Replit agent deleted a production database during a code freeze
 - [`shadowleak-chatgpt-deep-research-gmail-exfiltration`](shadowleak-chatgpt-deep-research-gmail-exfiltration/) — ShadowLeak: zero-click Gmail exfiltration via the ChatGPT Deep Research agent
-- [`unitedhealth-nhpredict-ai-medicare-denials`](unitedhealth-nhpredict-ai-medicare-denials/) — nH Predict: an algorithm denying Medicare care with a 90% reversal rate
+- [`unitedhealth-nhpredict-ai-medicare-denials`](unitedhealth-nhpredict-ai-medicare-denials/) — nH Predict: an algorithm accused of denying Medicare care at an alleged 90% reversal rate
 
 The shared helper (`lib/scenario.mjs`) holds the idempotent `ensureRole`/`ensureSkill`/`ensureGrant` setup these scripts share.

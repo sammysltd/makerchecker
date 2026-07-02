@@ -40,11 +40,14 @@ likely to recur. The data plants two escalations among ten complaints:
 
 ```bash
 docker compose up   # from the repo root; seeds everything on first boot
-export H='authorization: Bearer mk_...'   # admin key printed at first boot
+# First boot prints two keys, each shown once: a DEMO ADMIN API KEY and a
+# DEMO OFFICER API KEY. The admin triggers the run; the officer decides the gate.
+export H='authorization: Bearer mk_...'         # DEMO ADMIN API KEY (triggers the run)
+export OFFICER='authorization: Bearer mk_...'   # DEMO OFFICER API KEY (approves the reportability gate)
 
 curl -X POST localhost:3000/api/flows/mdr-reportability-triage/runs -H "$H" -H 'content-type: application/json' -d '{}'
 curl localhost:3000/api/approvals -H "$H"
-curl -X POST localhost:3000/api/approvals/<id>/decision -H "$H" \
+curl -X POST localhost:3000/api/approvals/<id>/decision -H "$OFFICER" \
   -H 'content-type: application/json' -d '{"decision":"approved","reason":"C-3004 and C-3008 are reportable; file MDRs within their clocks"}'
 curl localhost:3000/api/runs/<runId> -H "$H"
 curl localhost:3000/api/audit/verify -H "$H"
@@ -52,8 +55,8 @@ curl localhost:3000/api/audit/verify -H "$H"
 
 The gate is identity-mode (`forbid_requester`): the user who triggered the run
 gets a 403 deciding it, and unauthenticated decisions are refused outright (fail
-closed). Approve with a key belonging to a different user than the one that
-triggered.
+closed). The DEMO OFFICER API KEY is the eligible approver, a different user
+than the one that triggered.
 
 Export the signed, offline-verifiable evidence bundle for inspection. An
 investigator verifies it with no access to your systems:

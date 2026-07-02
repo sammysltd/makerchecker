@@ -10,6 +10,17 @@ MakerChecker is self-hosted software that governs AI agents through **structural
 
 Your agents keep running in their existing framework. MakerChecker is the checkpoint in front of them and the record behind them: a Fastify server on Postgres. Agents connect as a **flow** (MakerChecker runs the steps and gates) or a **proxy session** (MakerChecker authorizes and records tool calls your framework executes). Both write the same audit chain.
 
+## Built for regulated healthcare
+
+MakerChecker is built for healthcare and life-sciences workflows where regulation requires a named human to own the consequential act — and where "the AI did it" is never an answer an inspector accepts. Four governed use cases ship as runnable examples:
+
+- **Pharmacovigilance ICSR triage** — an agent triages the day's adverse-event cases, but a named medical reviewer signs before the binding seriousness determination starts the 15-day expedited clock (21 CFR 314.80) and the E2B(R3) report transmits. [examples/pv-icsr-processing](examples/pv-icsr-processing/README.md)
+- **MDR complaint reportability** — an agent triages device complaints, but the regulatory officer decides reportability behind a gate; only then are the MDR report skeletons drafted against the 21 CFR 803 clocks. [examples/mdr-reportability-triage](examples/mdr-reportability-triage/README.md)
+- **Oncology patient access** — a hub-services agent verifies benefits, matches funding, and drafts appeals on its own, but cannot submit an appeal or enroll a patient into copay/foundation support (Anti-Kickback / False Claims exposure) without a named access specialist signing. [examples/oncology-patient-access](examples/oncology-patient-access/README.md)
+- **CRO cohort identification** — a screening agent pre-screens trial candidates against inclusion/exclusion criteria, but the eligibility attestation that advances a patient is reserved for the investigator (ICH-GCP). [examples/cro-cohort-identification](examples/cro-cohort-identification/README.md)
+
+The controls themselves are domain-agnostic — the same engine that parks an ICSR at a medical-review gate also governs money movement. The finance demos ([daily cash reconciliation](examples/daily-cash-reconciliation/README.md), [AML alert triage](examples/aml-alert-triage/README.md)) stay in the repo as proof of that generality.
+
 **New here?** Operator → [Quickstart](#quickstart). Integrator → [Integration](#integration). Security reviewer → [docs/security-model.md](docs/security-model.md). Examiner → [docs/audit-spec.md](docs/audit-spec.md). GRC analyst → [docs/compliance/control-mapping.md](docs/compliance/control-mapping.md).
 
 [Live demo](https://makerchecker.ai/demo/): an agent is blocked from exceeding its grant and from approving its own work, the run's audit chain verifies offline, and a named human signs off only where a rule requires it. No signup.
@@ -39,27 +50,41 @@ Every refusal is named and audited:
 docker compose up
 ```
 
-Postgres and the server come up on port 3000. First boot seeds the demo and prints an admin key and an officer key — copy them from the logs.
+Postgres and the server come up on port 3000. First boot seeds the demos and prints two keys, each shown once — copy both from the logs. The **admin key** triggers runs; the **officer key** belongs to a second seeded user and is the eligible approver for identity-mode (`forbid_requester`) gates, where whoever triggered the run is refused as its approver.
 
 On a production (non-demo) deployment nothing is seeded; mint the first admin and its API key explicitly with `node dist/cli.js bootstrap-admin --email <e> --name <n>` (printed once). See [First admin on a fresh deployment](docs/quickstart.md#first-admin-on-a-fresh-deployment).
 
-A cash-reconciliation flow with a maker-checker constraint is seeded and ready:
+The drug-safety flow is seeded and ready: a pharmacovigilance case processor triages the day's adverse-event cases (two planted 15-day expedited cases among ten) and the run parks at the medical-review gate — the binding seriousness determination that starts the 15-day expedited clock (21 CFR 314.80) and the E2B(R3) transmission are high-risk skills the flow grammar refuses to run without that preceding gate:
 
 ```bash
-export H='authorization: Bearer mk_...'   # admin key from the logs
+export H='authorization: Bearer mk_...'         # DEMO ADMIN API KEY (triggers the run)
+export OFFICER='authorization: Bearer mk_...'   # DEMO OFFICER API KEY (decides the gate)
 
 # Trigger the flow
-curl -X POST localhost:3000/api/flows/daily-cash-reconciliation/runs -H "$H" -H 'content-type: application/json' -d '{}'
+curl -X POST localhost:3000/api/flows/pv-icsr-processing/runs -H "$H" -H 'content-type: application/json' -d '{}'
 
-# Inspect the pending approval gate
+# Inspect the pending medical-review gate
 curl localhost:3000/api/approvals -H "$H"
 
-# Approve the gate
+# The requester cannot approve their own run — this is refused with a 403
 curl -X POST localhost:3000/api/approvals/<id>/decision -H "$H" -H 'content-type: application/json' \
-  -d '{"decision":"approved","reason":"Exceptions resolved"}'
+  -d '{"decision":"approved","reason":"self-approval attempt"}'
+
+# The medical reviewer signs; only now does the clock start and the report file
+curl -X POST localhost:3000/api/approvals/<id>/decision -H "$OFFICER" -H 'content-type: application/json' \
+  -d '{"decision":"approved","reason":"Seriousness and expectedness confirmed for P-4003 and P-4009; file 15-day expedited ICSRs per 21 CFR 314.80"}'
 
 # Verify the audit chain
 curl localhost:3000/api/audit/verify -H "$H"
+```
+
+The planted cases and the deliberate near-misses are described in [examples/pv-icsr-processing](examples/pv-icsr-processing/README.md). The same engine governs money movement — the seeded [daily-cash-reconciliation](examples/daily-cash-reconciliation/README.md) flow parks at an exception-review gate the same way:
+
+```bash
+curl -X POST localhost:3000/api/flows/daily-cash-reconciliation/runs -H "$H" -H 'content-type: application/json' -d '{}'
+curl localhost:3000/api/approvals -H "$H"
+curl -X POST localhost:3000/api/approvals/<id>/decision -H "$H" -H 'content-type: application/json' \
+  -d '{"decision":"approved","reason":"Both exceptions explained"}'
 ```
 
 Full local setup, and running with real models, is in [docs/quickstart.md](docs/quickstart.md).
