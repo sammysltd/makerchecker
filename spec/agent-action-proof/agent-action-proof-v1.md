@@ -162,10 +162,8 @@ key is legitimate.
 
 AAPR deliberately does not prove two further legs: **independent judgment** (a
 checker distinct from the producer) and **existed-before-outcome** (external
-time anchoring). Both compose as payload content: an approval event whose
-`payload` carries an independent party's signed verdict, and/or an external
-timestamp proof (e.g. RFC 3161 or OpenTimestamps) over the event `hash`. This
-is an extension seam, not a v1 feature.
+time anchoring). Version 1 keeps its scope to what the conformance corpus can
+test byte-for-byte.
 
 ## 6. Verification
 
@@ -241,7 +239,7 @@ project issue tracker.
   I-JSON (RFC 7493) — well-formed Unicode, no duplicate member names,
   double-range numbers — with fail-closed rejection of unpaired surrogates in
   both producer and verifier; §3 pins the `occurredAt` grammar; §5 names the
-  two legs AAPR does not prove and how they compose; §7 adds the
-  `ill-formed-string` conformance vector. This restricts the valid input
+  two legs AAPR does not prove; §7 adds the `ill-formed-string` conformance
+  vector. This restricts the valid input
   domain to what RFC 8785 already assumes; no byte hashed from valid input
   changes. Credit: external review of the v1 draft (babyblueviper1).
