@@ -53,6 +53,23 @@ reproducibility):
 - Object members whose value is `undefined` are omitted; `null` serializes as
   `null`.
 
+Every hashed or signed serialization MUST additionally be **I-JSON
+(RFC 7493)**. RFC 8785 assumes I-JSON input, and behavior on ill-formed strings
+diverges across implementations, which breaks cross-language reproducibility.
+Concretely:
+
+- All strings — including every string anywhere inside `payload` — MUST be
+  well-formed Unicode. An unpaired surrogate is invalid: a producer MUST reject
+  such an event before hashing, and a verifier MUST reject such a bundle with a
+  distinct spec-violation verdict (ill-formed input, not tamper).
+- Objects, including `payload` objects at any depth, MUST NOT contain duplicate
+  member names.
+- Numbers MUST be within IEEE 754 double-precision range (implied by the
+  RFC 8785 number rule above; made explicit here).
+
+Ill-formed input fails closed: it is rejected before any hash is computed, with
+identical semantics in producer and verifier.
+
 ## 3. Event hash
 
 Each event carries a `hash`:
@@ -74,10 +91,14 @@ hash = SHA-256( canonicalJson({
 - The hashed object uses exactly these camelCase keys. After canonical sorting
   the member order is: `actor`, `entityId`, `entityType`, `eventType`, `id`,
   `occurredAt`, `payload`, `prevHash`, `runId`.
-- `occurredAt` MUST be stored and hashed as text (ISO 8601 UTC, e.g.
-  `2026-06-12T09:30:00.123Z`), byte-for-byte as stored. Timestamp column types
-  reformat on round-trip and break recomputation; fixed-format UTC ISO strings
-  also sort lexicographically in chronological order.
+- `occurredAt` MUST be stored and hashed as text, byte-for-byte as stored, and
+  MUST match this grammar: RFC 3339 UTC with `Z` offset and exactly three
+  fractional digits — `YYYY-MM-DDTHH:MM:SS.sssZ`, the ECMAScript
+  `Date.prototype.toISOString()` format (e.g. `2026-06-12T09:30:00.123Z`).
+  Pinning the grammar, not an example, keeps receipts byte-comparable across
+  producers. Timestamp column types reformat on round-trip and break
+  recomputation; fixed-format UTC strings also sort lexicographically in
+  chronological order.
 - A storage-order field (`seq` in the wire format) MUST NOT be included in the
   hash. Chain order is defined solely by `prevHash` linkage; verifiers MUST NOT
   assume storage-order values are contiguous.
@@ -139,6 +160,13 @@ obtains the instance public key through a trusted channel once and pins it. A
 bundle proves integrity and origin under its embedded key; it cannot prove which
 key is legitimate.
 
+AAPR deliberately does not prove two further legs: **independent judgment** (a
+checker distinct from the producer) and **existed-before-outcome** (external
+time anchoring). Both compose as payload content: an approval event whose
+`payload` carries an independent party's signed verdict, and/or an external
+timestamp proof (e.g. RFC 3161 or OpenTimestamps) over the event `hash`. This
+is an extension seam, not a v1 feature.
+
 ## 6. Verification
 
 Given a bundle and no producer access, a conforming verifier MUST perform, and
@@ -175,8 +203,10 @@ A producer or verifier self-certifies as **Agent-Proof compatible, v1** by
 passing the public conformance corpus in
 [`packages/proof-verifier/vectors/`](../../packages/proof-verifier/vectors):
 valid full and run bundles plus adversarial variants (tampered payload,
-corrupted signature, truncation, reordering, a re-signed foreign-run splice, and
-a wrong-key forgery), each with the verdict in
+corrupted signature, truncation, reordering, a re-signed foreign-run splice, a
+wrong-key forgery, and an ill-formed string — vector `ill-formed-string`, a
+payload string containing an unpaired surrogate, which MUST be rejected as
+ill-formed input per §2, not as tamper), each with the verdict in
 [`vectors/index.json`](../../packages/proof-verifier/vectors/index.json). A
 verifier MUST return the listed verdict for every case.
 
@@ -204,3 +234,14 @@ is hashed or signed require a new version number. Additive manifest fields that
 do not enter the signing string of §5 are permitted within version 1. Report
 weaknesses or propose changes via [SECURITY.md](../../SECURITY.md) and the
 project issue tracker.
+
+### v1 amendments
+
+- **2026-07-02** — errata: §2 now requires every hashed serialization to be
+  I-JSON (RFC 7493) — well-formed Unicode, no duplicate member names,
+  double-range numbers — with fail-closed rejection of unpaired surrogates in
+  both producer and verifier; §3 pins the `occurredAt` grammar; §5 names the
+  two legs AAPR does not prove and how they compose; §7 adds the
+  `ill-formed-string` conformance vector. This restricts the valid input
+  domain to what RFC 8785 already assumes; no byte hashed from valid input
+  changes. Credit: external review of the v1 draft (babyblueviper1).
