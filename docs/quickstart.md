@@ -19,25 +19,31 @@ This starts `postgres:17-alpine` and builds/starts the server. The compose file 
 makerchecker server listening on :3000 (executor: scripted)
 ```
 
-Copy both keys; each is shown once (only the hashes are stored). The admin key triggers runs and approves the cash-reconciliation gate below; the officer key is the eligible approver for the AML flow's identity-mode gate. The requester cannot approve their own run. The web UI is served at `http://localhost:3000`.
+Copy both keys; each is shown once (only the hashes are stored). The admin key triggers runs; the officer key belongs to a second seeded user and is the eligible approver for identity-mode (`forbid_requester`) gates — the medical-review gate in `pv-icsr-processing` and the reportability gate in `mdr-reportability-triage`. The requester cannot approve their own run, so the user who triggered gets a 403 deciding those gates. The web UI is served at `http://localhost:3000`.
 
 `executor: scripted` means no model API key was found, so agent steps execute deterministically (fully air-gapped). Set `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` on the host before `docker compose up` to run agents on a real model (`executor: llm (...)`).
 
-Drive the demo:
+Drive the drug-safety demo — the case processor triages the day's adverse-event cases and the run parks at the medical-review gate, which the admin (as the requester) cannot decide:
 
 ```bash
-export H='authorization: Bearer mk_...'   # the key printed at boot
+export H='authorization: Bearer mk_...'         # DEMO ADMIN API KEY
+export OFFICER='authorization: Bearer mk_...'   # DEMO OFFICER API KEY
 
-curl -X POST localhost:3000/api/flows/daily-cash-reconciliation/runs \
+curl -X POST localhost:3000/api/flows/pv-icsr-processing/runs \
   -H "$H" -H 'content-type: application/json' -d '{}'
 # -> {"runId":"..."}
 
 curl localhost:3000/api/approvals -H "$H"
-# -> {"approvals":[{"id":"...","step_key":"exception_review",...}]}
+# -> {"approvals":[{"id":"...","step_key":"medical_review",...}]}
 
 curl -X POST localhost:3000/api/approvals/<id>/decision \
   -H "$H" -H 'content-type: application/json' \
-  -d '{"decision":"approved","reason":"Both exceptions explained"}'
+  -d '{"decision":"approved","reason":"self-approval attempt"}'
+# -> 403 {"error":"the user who triggered this run cannot decide gate \"medical_review\" (forbid_requester)"}
+
+curl -X POST localhost:3000/api/approvals/<id>/decision \
+  -H "$OFFICER" -H 'content-type: application/json' \
+  -d '{"decision":"approved","reason":"Seriousness and expectedness confirmed for P-4003 and P-4009; file 15-day expedited ICSRs per 21 CFR 314.80"}'
 # -> {"ok":true}
 
 curl localhost:3000/api/runs/<runId> -H "$H"     # steps, approvals, audit events
@@ -45,7 +51,7 @@ curl localhost:3000/api/audit/verify -H "$H"
 # -> {"ok":true,"count":<n>,"headHash":"..."}
 ```
 
-The demo data contains exactly two planted exceptions (`T-1009` amount mismatch, `T-1012` missing ledger entry); see [the demo README](../examples/daily-cash-reconciliation/README.md), which also covers `self-approval-attempt`, the seeded flow that segregation of duties blocks. The seed also publishes `high-value-payment` (a 2-approver dual-authorization gate) and `aml-alert-triage`, the financial-crime demo that parks at a BSA-officer gate; see [its README](../examples/aml-alert-triage/README.md).
+The planted cases (`P-4003` acute liver failure, `P-4009` foreign-sourced anaphylaxis — both 15-day expedited) and the deliberate near-misses are in [the pv-icsr README](../examples/pv-icsr-processing/README.md). The seed also publishes `mdr-reportability-triage`, the medical-device demo that parks at a reportability gate for the regulatory officer ([README](../examples/mdr-reportability-triage/README.md)); `daily-cash-reconciliation`, with two planted exceptions (`T-1009` amount mismatch, `T-1012` missing ledger entry) and the `self-approval-attempt` flow that segregation of duties blocks ([README](../examples/daily-cash-reconciliation/README.md)); and `high-value-payment` (a 2-approver dual-authorization gate).
 
 ## Local development
 
