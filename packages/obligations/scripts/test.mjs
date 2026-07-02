@@ -1,10 +1,13 @@
 /**
  * Tests the obligations checker against (a) the proof-verifier's real signed
- * conformance bundle, and (b) a freshly-built signed bundle with no approvals,
+ * conformance bundle, (b) a freshly-built signed bundle with no approvals,
  * so all three statuses (MET, NOT_EVIDENCED, NOT_APPLICABLE) are exercised on a
- * verifying chain.
+ * verifying chain, (d) a decision event without a named signer (Part 11 11.50
+ * must NOT be evidenced), and (e) the CLI text output: per-clause notes and the
+ * scope footer.
  */
 
+import { spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, sign as edSign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,16 +25,12 @@ const GENESIS_PREFIX = "makerchecker-genesis:";
 let failures = 0;
 const check = (cond, msg) => { if (cond) { console.log(`  ok  ${msg}`); } else { console.error(`  FAIL ${msg}`); failures++; } };
 
-// ---- Build a minimal signed full bundle with NO approvals ----
-function buildNoApprovalBundle() {
+// ---- Build a minimal signed full bundle from event specs ----
+function buildSignedBundle(specs) {
   const instanceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
   const publicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
   const hashInput = (e) => ({ id: e.id, occurredAt: e.occurred_at, actor: e.actor, eventType: e.event_type, entityType: e.entity_type, entityId: e.entity_id, runId: e.run_id, payload: e.payload, prevHash: e.prev_hash });
-  const specs = [
-    { id: "g", occurred_at: "2026-01-01T00:00:00.000Z", actor: { kind: "system" }, event_type: "audit.genesis", payload: { instanceId } },
-    { id: "s", occurred_at: "2026-01-01T00:00:01.000Z", actor: { kind: "agent", id: "a1" }, event_type: "skill.invoked", run_id: "r1", payload: { skill: "lookup@1" } },
-  ];
   let prev = sha(GENESIS_PREFIX + instanceId);
   const events = specs.map((s, i) => {
     const e = { seq: String(i + 1), id: s.id, occurred_at: s.occurred_at, actor: s.actor, event_type: s.event_type, entity_type: null, entity_id: null, run_id: s.run_id ?? null, payload: s.payload, prev_hash: prev };
@@ -44,6 +43,20 @@ function buildNoApprovalBundle() {
   const signature = edSign(null, Buffer.from(signingString, "utf8"), privateKey).toString("base64");
   return { manifest: { ...unsigned, signature }, events };
 }
+
+const INSTANCE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const buildNoApprovalBundle = () => buildSignedBundle([
+  { id: "g", occurred_at: "2026-01-01T00:00:00.000Z", actor: { kind: "system" }, event_type: "audit.genesis", payload: { instanceId: INSTANCE } },
+  { id: "s", occurred_at: "2026-01-01T00:00:01.000Z", actor: { kind: "agent", id: "a1" }, event_type: "skill.invoked", run_id: "r1", payload: { skill: "lookup@1" } },
+]);
+
+// An approval decided WITHOUT a named decider/decision in its payload: the
+// event exists, but it does not manifest a Part 11 signature.
+const buildAnonymousDecisionBundle = () => buildSignedBundle([
+  { id: "g", occurred_at: "2026-01-01T00:00:00.000Z", actor: { kind: "system" }, event_type: "audit.genesis", payload: { instanceId: INSTANCE } },
+  { id: "q", occurred_at: "2026-01-01T00:00:01.000Z", actor: { kind: "agent", id: "a1" }, event_type: "approval.requested", run_id: "r1", payload: { gate: "g1" } },
+  { id: "d", occurred_at: "2026-01-01T00:00:02.000Z", actor: { kind: "system" }, event_type: "approval.decided", run_id: "r1", payload: { note: "auto-decided, no signer recorded" } },
+]);
 
 // ---- Test A: real signed bundle with approvals, against Part 11 ----
 const validFull = JSON.parse(readFileSync(join(VECTORS, "valid-full.json"), "utf8"));
@@ -72,6 +85,24 @@ for (const id of ["part-11", "annex-11", "gamp5", "hipaa-164-312"]) {
   const r = await checkObligations(validFull, profile(id));
   check(r.clauses.length > 0 && r.reliable, `${id} profile runs and verifies`);
 }
+
+// ---- Test D: 11.50 requires the decider and decision fields, not just the event ----
+const d = await checkObligations(buildAnonymousDecisionBundle(), profile("part-11"));
+console.log("Test D — approval decided without a named signer vs Part 11:");
+check(d.reliable === true, "chain verifies");
+const dById = Object.fromEntries(d.clauses.map((c) => [c.id, c]));
+check(dById["11.50"].status === STATUS.NOT_EVIDENCED, "11.50 NOT_EVIDENCED when approval.decided lacks decider/decision fields");
+check(dById["11.70"].status === STATUS.MET, "11.70 record-linking still MET (the event is chained)");
+
+// ---- Test E: CLI text output prints notes and the scope footer ----
+console.log("Test E — CLI text output (annex-11):");
+const CLI = join(HERE, "..", "src", "cli.js");
+const e = spawnSync(process.execPath, [CLI, "check", "--bundle", join(VECTORS, "valid-full.json"), "--profile", "annex-11"], { encoding: "utf8" });
+check(e.status === 0, `CLI exits 0 on a verified bundle (got ${e.status})`);
+check(e.stdout.includes("note: Partial: tamper-evidence is provided"), "prints each clause's note under it (Partial caveat visible)");
+check(e.stdout.includes("Scope: this profile assesses 5 of 6 mapped clauses in full; 1 is in part the operator's process, not evidenced by this tool."), "prints the scope footer");
+check(e.stdout.includes("record the identity of operators entering, changing, confirming or deleting data"), "12.4 title carries the regulation text verbatim");
+check(!e.stdout.includes("Management of who can enter and change data"), "12.4 title no longer paraphrased as segregation of duties");
 
 console.log(failures ? `\n${failures} check(s) FAILED` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

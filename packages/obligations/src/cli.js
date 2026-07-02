@@ -101,9 +101,14 @@ async function main() {
     for (const c of report.clauses) {
       process.stdout.write(`  ${ICON[c.status]} ${c.id}  ${c.status}${c.citedSeqs.length ? `  (seq ${c.citedSeqs.join(", ")})` : ""}\n`);
       process.stdout.write(`      ${c.title}\n`);
+      if (c.note) process.stdout.write(`      note: ${c.note}\n`);
     }
     const s = report.summary;
     process.stdout.write(`\n  ${s.MET} met, ${s.NOT_EVIDENCED} not-evidenced, ${s.NOT_APPLICABLE} not-applicable\n`);
+    const total = report.clauses.length;
+    const partial = report.clauses.filter((c) => c.partial).length;
+    process.stdout.write(`\n  Scope: this profile assesses ${total - partial} of ${total} mapped clauses in full; ${partial} ${partial === 1 ? "is" : "are"} in part the operator's process, not evidenced by this tool.\n`);
+    process.stdout.write(`  Clauses of the framework not mapped in this profile are not assessed here.\n`);
   }
 
   if (!report.chain.verified) process.exit(1);

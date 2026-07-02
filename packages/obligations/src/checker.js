@@ -31,7 +31,7 @@ export async function checkObligations(bundle, profile, opts = {}) {
       applicable = evalPredicate(idx, c.applicableWhen, ctx).met;
     }
     if (!applicable) {
-      return { id: c.id, title: c.title, requirement: c.requirement, status: STATUS.NOT_APPLICABLE, citedSeqs: [], note: c.note };
+      return { id: c.id, title: c.title, requirement: c.requirement, status: STATUS.NOT_APPLICABLE, citedSeqs: [], note: c.note, partial: c.partial === true };
     }
     const r = evalPredicate(idx, c.evidence, ctx);
     return {
@@ -41,6 +41,7 @@ export async function checkObligations(bundle, profile, opts = {}) {
       status: r.met ? STATUS.MET : STATUS.NOT_EVIDENCED,
       citedSeqs: r.seqs,
       note: c.note,
+      partial: c.partial === true,
     };
   });
 

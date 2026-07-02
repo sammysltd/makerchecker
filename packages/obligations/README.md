@@ -35,12 +35,24 @@ mc-obligations check --bundle run-evidence.json --profile gamp5 --strict
 EU GMP Annex 11 (Computerised Systems)
 Bundle: chain VERIFIED (8 events)
 
-  ✓ 9     MET  (seq 1, 7, 3)   Audit Trails
-  ✓ 12.1  MET  (seq 4)         Security — access restricted to authorised persons
-  ✓ 14    MET  (seq 6)         Electronic Signature — permanently linked, with time and date
+  ✓ 4  MET
+      Validation
+      note: Partial: tamper-evidence is provided; lifecycle validation (URS/FS/IQ/OQ/PQ) is the operator's process — see the GxP validation kit.
+  ✓ 9  MET  (seq 1, 7, 3)
+      Audit Trails
+      note: Every agent action and governance decision is recorded in the hash-chained log.
+  ✓ 12.1  MET  (seq 4)
+      Security — access restricted to authorised persons
   ...
   6 met, 0 not-evidenced, 0 not-applicable
+
+  Scope: this profile assesses 5 of 6 mapped clauses in full; 1 is in part the operator's process, not evidenced by this tool.
+  Clauses of the framework not mapped in this profile are not assessed here.
 ```
+
+Clause titles carry the regulation's own words; how MakerChecker evidences the
+clause (and any *Partial* caveat about what remains the operator's process) is
+in the clause's `note`, printed with every result.
 
 ## How it works
 
@@ -48,7 +60,8 @@ Bundle: chain VERIFIED (8 events)
    chain does not verify, the report says so and its findings must not be relied
    upon — evidence only counts on an intact chain.
 2. Each clause carries an `evidence` predicate over the audit events
-   (`eventType`, `payloadMatch`, `anyOf`/`allOf`, `chainVerified`). A clause is:
+   (`eventType`, `payloadMatch`, `payloadHas`, `anyOf`/`allOf`,
+   `chainVerified`). A clause is:
    - **MET** when concrete events prove it — their `seq` numbers are cited;
    - **NOT_EVIDENCED** when the activity occurred but the evidence is absent;
    - **NOT_APPLICABLE** when the clause's precondition never arose in this run

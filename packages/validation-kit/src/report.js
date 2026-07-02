@@ -1,7 +1,8 @@
 /**
  * Renders a human-readable Computer System Validation report (Markdown) from a
  * generateValidation() result: chain statement, IQ/OQ/PQ result tables, the
- * Requirements Traceability Matrix, a qualification statement, and an approval
+ * Requirements Traceability Matrix, a deviations section (waived requirements
+ * with their recorded reasons), a qualification statement, and an approval
  * block for the operator's named reviewers to sign.
  */
 
@@ -32,14 +33,25 @@ export function renderReport(v, { generatedAt } = {}) {
     r.ursText,
     r.fs.join(", ") || "—",
     r.tests.map((t) => `${t.id} (${MARK[t.result]})`).join("<br>") || "—",
-    r.untested ? "not exercised" : r.covered ? "covered" : "**gap**",
+    r.covered ? "covered" : r.waived ? "not exercised — waived (deviation)" : r.untested ? "**not exercised**" : "**gap**",
   ]);
+
+  const deviations = v.rtm.filter((r) => r.waived);
+  const deviationSection = deviations.length
+    ? `The requirements below were **not exercised** by this run and were explicitly
+waived by the operator. Each waiver is a deviation: the reason is recorded here
+verbatim and is accepted (or rejected) by the named reviewers in the approval block.
+
+${table(["URS", "Requirement", "Waiver reason (deviation)"], deviations.map((r) => [r.urs, r.ursText, r.waiverReason]))}`
+    : "_None — every user requirement was exercised by this run._";
 
   const qualStatement = !v.chain.verified
     ? "**NOT QUALIFIED** — the audit chain did not verify; this report cannot be relied upon as validation evidence."
     : v.qualified
-      ? "**QUALIFIED** — every executed test passed and every user requirement exercised by this run is covered, on a verified chain."
-      : "**NOT QUALIFIED** — one or more executed tests failed or a user requirement is uncovered; see the matrix below.";
+      ? deviations.length
+        ? "**QUALIFIED (with deviations)** — every executed test passed and every user requirement is covered or explicitly waived, on a verified chain; see the Deviations section."
+        : "**QUALIFIED** — every executed test passed and every user requirement is covered, on a verified chain."
+      : "**NOT QUALIFIED** — one or more executed tests failed, or a user requirement is uncovered or was not exercised (and not waived); see the matrix below.";
 
   return `# Validation Report — ${v.protocol.title}
 
@@ -70,13 +82,17 @@ ${stageTable(v.stages.PQ)}
 
 ${table(["URS", "Requirement", "FS", "Tests", "Coverage"], rtmRows)}
 
-## 5. Summary
+## 5. Deviations
+
+${deviationSection}
+
+## 6. Summary
 
 - Test cases: **${v.summary.total}** — ${v.summary.PASS} passed, ${v.summary.FAIL} failed, ${v.summary.NOT_APPLICABLE} not applicable.
-- User requirements covered: **${v.summary.requirementsCovered} / ${v.summary.requirementsTotal}**.
+- User requirements covered: **${v.summary.requirementsCovered} / ${v.summary.requirementsTotal}**${v.summary.requirementsWaived ? ` (${v.summary.requirementsWaived} waived as deviation${v.summary.requirementsWaived === 1 ? "" : "s"})` : ""}.
 - Qualification outcome: ${qualStatement}
 
-## 6. Approval
+## 7. Approval
 
 The named reviewers below confirm the scope of this validation and accept the
 results. (Maker-checker applies to the validation itself: the author and the
